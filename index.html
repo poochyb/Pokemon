@@ -94,6 +94,19 @@ main::before{content:"";position:absolute;left:calc(var(--gutter) * .45);top:0;b
 .count small,.total small{opacity:.75;font-size:.8rem}
 .total{font-family:var(--display);white-space:nowrap}
 .total strong{color:var(--gold);font-size:1.05rem}
+.viewing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem 1rem;
+  padding:.4rem var(--gutter);background:var(--gold);color:#1C2433;font-weight:700;font-size:.9rem}
+.viewing .btn.light{background:rgba(28,36,51,.15);color:#1C2433;text-decoration:none;font-weight:700}
+body.view-only .add, body.view-only #shareBtn, body.view-only #backupMenu, body.view-only .tab .x{display:none}
+body.view-only .toggle{cursor:default}
+dialog.share{background:var(--page);color:var(--ink);border-radius:14px;padding:1.1rem 1.2rem;max-width:min(92vw,560px);width:100%}
+dialog.share h3{font:800 1.25rem/1.2 var(--display);margin:0 0 .4rem}
+dialog.share p{margin:.2rem 0 .7rem}
+dialog.share .hint{color:var(--muted);font-size:.85rem;margin:.7rem 0 0}
+#shareUrl{width:100%;padding:.45rem .6rem;border:1px solid var(--line);border-radius:8px;background:var(--desk);font-size:.85rem}
+.share-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
+.share-actions button{width:auto;margin:0}
+.btn.light-dark{background:var(--line);color:var(--ink);font-weight:400}
 .menu > summary{list-style:none}
 .menu > summary::-webkit-details-marker{display:none}
 .menu-list{position:absolute;right:0;top:calc(100% + .3rem);z-index:30;display:flex;flex-direction:column;gap:.25rem;
@@ -123,6 +136,10 @@ dialog button{margin-top:.75rem;width:100%}
 </head>
 <body>
 <div class="topbar">
+  <div class="viewing" id="viewing" hidden>
+    <span>👀 You’re viewing a shared binder<span id="viewingDate"></span>. It’s view-only.</span>
+    <a class="btn light" href="./" id="ownBinder">Open my own binder</a>
+  </div>
   <header>
     <h1>Artist Binder</h1>
     <form class="add" id="addForm">
@@ -137,6 +154,7 @@ dialog button{margin-top:.75rem;width:100%}
       <button class="btn" type="submit">Add</button>
     </form>
     <div class="total" id="total" hidden></div>
+    <button class="btn light" id="shareBtn">Share</button>
     <details class="tools menu" id="backupMenu">
       <summary class="btn light">Backup ▾</summary>
       <div class="menu-list">
@@ -151,8 +169,19 @@ dialog button{margin-top:.75rem;width:100%}
 </div>
 
 <main id="main"></main>
-<footer>Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars (via TCGdex, or TCGCSV’s daily TCGplayer data when TCGdex has none); cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved in this browser; use Save backup to keep a copy.</footer>
+<footer>Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars (via TCGdex, or TCGCSV’s daily TCGplayer data when TCGdex has none); cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved automatically in this browser; use Backup to keep a copy, or Share to show your binder on another device.</footer>
 
+<dialog id="shareDlg" class="share">
+  <h3>Share your binder</h3>
+  <p>Anyone with this link can see your artists and the cards you own. They can’t change anything.</p>
+  <input id="shareUrl" readonly aria-label="Share link">
+  <div class="share-actions">
+    <button class="btn" id="copyShare">Copy link</button>
+    <button class="btn light-dark" id="nativeShare" hidden>Send…</button>
+    <button class="btn light-dark" id="closeShare">Close</button>
+  </div>
+  <p class="hint">This is a snapshot of right now. If you mark more cards later, click Share again for a fresh link.</p>
+</dialog>
 <dialog id="zoomDlg"><img id="zoomImg" alt=""><button class="btn" id="zoomClose">Close</button></dialog>
 
 <script>
@@ -168,7 +197,8 @@ const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {} };
 
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
 let saveTimer;
-function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }, 150); }
+let viewOnly = false; // true when showing someone's shared link; never saves anything
+function save(){ if (viewOnly) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }, 150); }
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const akey = a => a.lang + "|" + a.name;
 const ckey = (lang, id) => lang + ":" + id;
@@ -382,7 +412,7 @@ function renderTotal(){
     if (state.owned[k]) seen.set(k, priceOf(a, c));
   }));
   $("total").hidden = seen.size === 0;
-  $("total").innerHTML = `My binder: <strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
+  $("total").innerHTML = `${viewOnly ? "Binder" : "My binder"}: <strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
 }
 
 function renderProgress(a){
@@ -471,7 +501,7 @@ function onPageClick(e){
   const z = e.target.closest("[data-zoom]");
   if (z){ $("zoomImg").src = z.dataset.zoom + "/high.webp"; $("zoomDlg").showModal(); return; }
   const t = e.target.closest(".toggle");
-  if (t){
+  if (t && !viewOnly){
     const a = activeArtist(), li = t.closest(".pocket"), k = ckey(a.lang, li.dataset.id);
     if (state.owned[k]) delete state.owned[k]; else state.owned[k] = true;
     const own = !!state.owned[k];
@@ -514,18 +544,91 @@ document.addEventListener("click", e => {
 // If even those would take over a third of the screen (e.g. zoomed in), nothing stays pinned.
 const topbar = document.querySelector(".topbar");
 function fitTopbar(){
-  const headerH = topbar.querySelector("header").offsetHeight;
+  const h = topbar.querySelector("header");
+  const headerH = h.offsetTop + h.offsetHeight; // includes the "viewing a shared binder" banner
   const pinnedH = topbar.offsetHeight - headerH;
   topbar.style.top = -(pinnedH > innerHeight / 3 ? topbar.offsetHeight : headerH) + "px";
 }
 new ResizeObserver(fitTopbar).observe(topbar);
 addEventListener("resize", fitTopbar);
 
+// ----- Share link -----
+// The binder (artists + owned cards) is packed into the part of the link after "#",
+// compressed when the browser supports it. Nothing is uploaded anywhere.
+const b64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64url = str => Uint8Array.from(atob(str.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+async function pipeBytes(bytes, stream){
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+}
+async function encodeShare(data){
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  if (typeof CompressionStream === "function") return "1." + b64url(await pipeBytes(bytes, new CompressionStream("deflate-raw")));
+  return "0." + b64url(bytes);
+}
+async function decodeShare(code){
+  const [kind, body] = code.split(".");
+  let bytes = unb64url(body);
+  if (kind === "1") bytes = await pipeBytes(bytes, new DecompressionStream("deflate-raw"));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function shareData(){
+  // Group owned card ids by language, only for languages of artists in the binder.
+  const langs = new Set(state.artists.map(a => a.lang)), owned = {};
+  Object.keys(state.owned).forEach(k => {
+    const i = k.indexOf(":"), lang = k.slice(0, i);
+    if (langs.has(lang)) (owned[lang] ||= []).push(k.slice(i + 1));
+  });
+  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), o: owned };
+}
+
+$("shareBtn").addEventListener("click", async () => {
+  if (!state.artists.length){ alert("Add an artist and mark some cards first, then share."); return; }
+  const url = location.origin + location.pathname + "#share=" + await encodeShare(shareData());
+  $("shareUrl").value = url;
+  $("copyShare").textContent = "Copy link";
+  $("nativeShare").hidden = !navigator.share;
+  $("shareDlg").showModal();
+  $("shareUrl").select();
+});
+$("copyShare").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("shareUrl").value); }
+  catch(e){ $("shareUrl").select(); document.execCommand("copy"); }
+  $("copyShare").textContent = "Copied!";
+});
+$("nativeShare").addEventListener("click", () => {
+  navigator.share({ title: "My Pokémon Artist Binder", url: $("shareUrl").value }).catch(() => {});
+});
+$("closeShare").addEventListener("click", () => $("shareDlg").close());
+addEventListener("hashchange", () => location.reload());
+
+async function openShared(code){
+  const d = await decodeShare(code);
+  if (!Array.isArray(d.a)) throw new Error("bad link");
+  const owned = {};
+  Object.entries(d.o || {}).forEach(([lang, ids]) => ids.forEach(id => owned[lang + ":" + id] = true));
+  const mine = state; // reuse this browser's cached card details and prices; nothing is saved
+  state = { artists: d.a.map(([name, lang]) => ({ name, lang })), owned, details: mine.details, prices: mine.prices, active: null };
+  state.active = state.artists[0] ? akey(state.artists[0]) : null;
+  viewOnly = true; ui.view = "owned";
+  document.body.classList.add("view-only");
+  $("viewing").hidden = false;
+  if (d.d) $("viewingDate").textContent = " (as of " + new Date(d.d + "T12:00").toLocaleDateString() + ")";
+  document.title = "Shared Artist Binder";
+}
+
 // Start
-loadNames("en");
-render();
-loadArtist(activeArtist());
-state.artists.forEach(a => { if (akey(a) !== state.active) loadArtist(a); });
+(async () => {
+  const m = location.hash.match(/^#share=(.+)$/);
+  if (m){
+    try { await openShared(m[1]); }
+    catch(e){ alert("This share link looks incomplete or broken. Ask for the link again, and make sure you copy all of it."); }
+  }
+  loadNames("en");
+  render();
+  loadArtist(activeArtist());
+  state.artists.forEach(a => { if (akey(a) !== state.active) loadArtist(a); });
+})();
 </script>
 </body>
 </html>
