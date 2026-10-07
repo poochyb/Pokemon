@@ -1,13 +1,19 @@
-# Pokémon TCG Collection
+# Pokémon TCG Projects
 
-A simple tracker for your Pokémon Trading Card Game collection. It runs in your web browser, and there's nothing to install.
+Two browser apps for Pokémon Trading Card Game collecting. There's nothing to install.
 
-## How to open it
+**Bookmark these:**
+- Artist Binder: https://poochyb.github.io/Pokemon/
+- Collection Tracker: https://poochyb.github.io/Pokemon/collection.html
 
-1. Download this project to your computer (see "Getting it onto your Mac" below).
-2. Double-click `index.html`. It opens in your web browser.
+## Artist Binder (`index.html`)
 
-## What it does
+Pick Pokémon card artists and see every card they illustrated, using data from TCGdex.
+Tap a card to mark it Owned or Missing and track your progress per artist.
+
+## Collection Tracker (`collection.html`)
+
+A simple tracker for every card you own, with prices.
 
 - **Find Cards**: search real Pokémon cards by name (and optionally by set). You'll see the card picture, set, rarity and current market price. Click **Add to collection**.
 - **My Collection**: see every card you own, with totals and an estimated value. You can:
@@ -20,7 +26,7 @@ A simple tracker for your Pokémon Trading Card Game collection. It runs in your
 
 Card data and prices come from the free [Pokémon TCG API](https://pokemontcg.io), which uses TCGplayer market prices in US dollars.
 
-> **Important:** your collection is saved inside the browser you use, on that computer.
+> **Important:** for both apps, your data is saved inside the browser you use, on that computer.
 > If you clear your browser data or switch browsers, it won't carry over, so use **Backup → Download backup** now and then.
 
 ## Getting it onto your Mac (first time)
@@ -32,7 +38,7 @@ cd ~/Documents/Claude_Work
 git clone https://github.com/poochyb/Pokemon.git Pokemon_TCG_Collection
 cd Pokemon_TCG_Collection
 git checkout claude/pokemon-tcg-collection-ws1czw
-open index.html
+open collection.html
 ```
 
 To get later updates, run this inside that folder:
@@ -43,8 +49,9 @@ git pull
 
 ## Files
 
-| File         | What it is                                  |
-|--------------|---------------------------------------------|
-| `index.html` | The page layout                             |
-| `style.css`  | Colors and styling                          |
-| `app.js`     | The logic: search, saving, totals, backups  |
+| File              | What it is                                  |
+|-------------------|---------------------------------------------|
+| `index.html`      | Artist Binder (everything in one file)      |
+| `collection.html` | Collection Tracker page layout              |
+| `style.css`       | Collection Tracker colors and styling       |
+| `app.js`          | Collection Tracker logic                    |
