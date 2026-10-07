@@ -88,6 +88,11 @@ main::before{content:"";position:absolute;left:calc(var(--gutter) * .45);top:0;b
 .meta{padding:.5rem .1rem 0;font-size:.85rem;line-height:1.35}
 .meta strong{display:block;font-size:.95rem}
 .meta span{display:block;color:var(--muted)}
+.meta .price{color:var(--ink);font-weight:700;font-family:var(--display);font-size:.95rem}
+.meta .price.muted{color:var(--muted);font-weight:400;font-family:var(--body);font-size:.8rem}
+.count small,.total small{opacity:.75;font-size:.8rem}
+.total{font-family:var(--display);white-space:nowrap}
+.total strong{color:var(--gold);font-size:1.15rem}
 
 .empty{max-width:34rem;padding:1rem 0}
 .empty h2{margin-bottom:.75rem;font-size:clamp(1.8rem,5vw,2.6rem)}
@@ -124,6 +129,7 @@ dialog button{margin-top:.75rem;width:100%}
       </select>
       <button class="btn" type="submit">Add</button>
     </form>
+    <div class="total" id="total" hidden></div>
     <div class="tools">
       <button class="btn light" id="exportBtn">Save backup</button>
       <button class="btn light" id="importBtn">Restore backup</button>
@@ -135,7 +141,7 @@ dialog button{margin-top:.75rem;width:100%}
 </div>
 
 <main id="main"></main>
-<footer>Card data and images from TCGdex. Your checkmarks are saved in this browser; use Save backup to keep a copy.</footer>
+<footer>Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars; cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved in this browser; use Save backup to keep a copy.</footer>
 
 <dialog id="zoomDlg"><img id="zoomImg" alt=""><button class="btn" id="zoomClose">Close</button></dialog>
 
@@ -145,6 +151,8 @@ const KEY = "artistBinder.v1";
 
 let state = load() || { artists: [], owned: {}, details: {}, active: null };
 state.details = state.details || {};
+state.prices = state.prices || {};
+const PRICE_MAX_AGE = 24 * 60 * 60 * 1000; // refresh prices once a day
 const ui = { view: "all", q: "", set: "", sort: state.sort || "name" };
 const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {} };
 
@@ -181,6 +189,36 @@ function fillDatalist(lang){
   $("artistList").innerHTML = (mem.names[lang] || []).filter(Boolean).map(n => `<option value="${esc(n)}">`).join("");
 }
 
+// Market value from TCGdex: TCGplayer (US dollars) first, Cardmarket (euros) if TCGplayer has nothing.
+function pickPrice(pricing){
+  const tp = pricing?.tcgplayer;
+  if (tp){
+    const keys = ["holofoil", "normal", "reverse-holofoil", ...Object.keys(tp)];
+    for (const v of keys){
+      const p = tp[v];
+      if (!p || typeof p !== "object") continue;
+      const val = p.marketPrice || p.midPrice;
+      if (val > 0) return { v: val, c: "USD" };
+    }
+  }
+  const cm = pricing?.cardmarket;
+  if (cm){
+    const val = cm.trend || cm.avg30 || cm.avg || cm["trend-holo"] || cm["avg30-holo"];
+    if (val > 0) return { v: val, c: "EUR" };
+  }
+  return null;
+}
+const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toFixed(2);
+function priceOf(a, c){ return state.prices[ckey(a.lang, c.id)]; }
+function sumValue(entries){
+  const t = { USD: 0, EUR: 0 };
+  entries.forEach(p => { if (p?.p) t[p.p.c] += p.p.v; });
+  const parts = [];
+  if (t.USD || !t.EUR) parts.push(money(t.USD, "USD"));
+  if (t.EUR) parts.push(money(t.EUR, "EUR"));
+  return parts.join(" + ");
+}
+
 function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, i) : id; }
 
 async function loadArtist(a){
@@ -208,10 +246,15 @@ async function loadArtist(a){
   } finally { delete mem.loading[k]; render(); }
 }
 
-// Fetch rarity and set names a few at a time; cached so it only happens once per card.
+// Fetch rarity, set name and market price a few cards at a time.
+// Rarity/set are kept forever; prices are re-fetched when older than a day.
 async function fillDetails(a){
   const cards = mem.cards[akey(a)] || [];
-  const todo = cards.filter(c => !state.details[ckey(a.lang, c.id)]);
+  const now = Date.now();
+  const todo = cards.filter(c => {
+    const k = ckey(a.lang, c.id), p = state.prices[k];
+    return !state.details[k] || !p || now - p.t > PRICE_MAX_AGE;
+  });
   let n = 0;
   const worker = async () => {
     while (todo.length){
@@ -219,7 +262,10 @@ async function fillDetails(a){
       try {
         const d = await getJSON(`${API}/${a.lang}/cards/${encodeURIComponent(c.id)}`);
         state.details[ckey(a.lang, c.id)] = { r: d.rarity || "", s: d.set?.name || "" };
-      } catch(e){ state.details[ckey(a.lang, c.id)] = { r: "", s: "" }; }
+        state.prices[ckey(a.lang, c.id)] = { p: pickPrice(d.pricing), t: Date.now() };
+      } catch(e){
+        state.details[ckey(a.lang, c.id)] ||= { r: "", s: "" };
+      }
       if (++n % 12 === 0) { save(); if (state.active === akey(a)) renderGrid(); }
     }
   };
@@ -244,6 +290,7 @@ function renderTabs(){
 
 function render(){
   renderTabs();
+  renderTotal();
   const a = activeArtist(), m = $("main"), tb = $("toolbar");
   if (!a){
     tb.hidden = true;
@@ -256,7 +303,7 @@ function render(){
   const sets = cards ? [...new Map(cards.map(c => [c.setId, c])).values()].sort((x,y) => x.order - y.order) : [];
   tb.hidden = false;
   tb.innerHTML = `
-    <div class="tb-head"><h2>${esc(a.name)}</h2><div class="count" id="count"></div><div class="bar"><span id="bar"></span></div></div>
+    <div class="tb-head"><h2>${esc(a.name)}</h2><div class="count" id="count"></div><div class="bar"><span id="bar"></span></div><div class="count" id="value"></div></div>
     <div class="filters">
       <div class="seg" role="group" aria-label="Show">
         ${["all","owned","missing"].map(v => `<button data-view="${v}" aria-pressed="${ui.view===v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join("")}
@@ -268,6 +315,7 @@ function render(){
         <option value="name" ${ui.sort==="name"?"selected":""}>Pokémon A–Z</option>
         <option value="old" ${ui.sort==="old"?"selected":""}>Oldest sets first</option>
         <option value="new" ${ui.sort==="new"?"selected":""}>Newest sets first</option>
+        <option value="value" ${ui.sort==="value"?"selected":""}>Highest value first</option>
       </select>
     </div>`;
   m.innerHTML = `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
@@ -277,10 +325,28 @@ function render(){
   renderGrid();
 }
 
+// Value of every owned card across all artists in the binder (each card counted once).
+function renderTotal(){
+  const seen = new Map();
+  state.artists.forEach(a => (mem.cards[akey(a)] || []).forEach(c => {
+    const k = ckey(a.lang, c.id);
+    if (state.owned[k]) seen.set(k, state.prices[k]);
+  }));
+  $("total").hidden = seen.size === 0;
+  $("total").innerHTML = `My binder: <strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
+}
+
 function renderProgress(a){
   const cards = mem.cards[akey(a)] || [], have = ownedCount(a);
   const pct = cards.length ? Math.round(have / cards.length * 100) : 0;
   if ($("count")) $("count").innerHTML = `<strong>${have}</strong> of ${cards.length} owned (${pct}%)`;
+  if ($("value")){
+    const owned = cards.filter(c => state.owned[ckey(a.lang, c.id)]);
+    const pending = owned.filter(c => !priceOf(a, c)).length;
+    $("value").innerHTML = `Owned value <strong>${sumValue(owned.map(c => priceOf(a, c)))}</strong>`
+      + (pending ? ` <small>(${pending} still loading)</small>` : "");
+  }
+  renderTotal();
   if ($("bar")) $("bar").style.width = pct + "%";
   renderTabs();
 }
@@ -299,7 +365,9 @@ function renderGrid(){
     return !q || c.name.toLowerCase().includes(q);
   });
   const byNum = (x,y) => String(x.num).localeCompare(String(y.num), undefined, {numeric:true});
-  list.sort(ui.sort === "name" ? (x,y) => x.name.localeCompare(y.name) || x.order - y.order || byNum(x,y)
+  const val = c => priceOf(a, c)?.p?.v ?? -1;
+  list.sort(ui.sort === "value" ? (x,y) => val(y) - val(x) || x.name.localeCompare(y.name)
+          : ui.sort === "name" ? (x,y) => x.name.localeCompare(y.name) || x.order - y.order || byNum(x,y)
           : ui.sort === "new" ? (x,y) => y.order - x.order || byNum(x,y)
           : (x,y) => x.order - y.order || byNum(x,y));
   st.className = "status";
@@ -307,14 +375,16 @@ function renderGrid(){
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
   $("grid").innerHTML = list.map(c => {
     const own = !!state.owned[ckey(a.lang, c.id)], d = state.details[ckey(a.lang, c.id)] || {};
-    const sn = setName(a, c);
+    const sn = setName(a, c), pr = priceOf(a, c);
+    const priceTxt = !pr ? `<span class="price muted">Price loading…</span>`
+      : pr.p ? `<span class="price">${money(pr.p.v, pr.p.c)}</span>` : `<span class="price muted">No price data</span>`;
     const img = c.image ? `<img loading="lazy" src="${esc(c.image)}/low.webp" alt="${esc(c.name)}, ${esc(sn)}">`
                         : `<span class="noimg">No image yet<br>${esc(c.name)}</span>`;
     return `<li class="pocket ${own?"owned":""}" data-id="${esc(c.id)}">
       <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
         <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
       ${c.image ? `<button class="zoom" data-zoom="${esc(c.image)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
-      <div class="meta"><strong>${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}</div></li>`;
+      <div class="meta"><strong>${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}</div></li>`;
   }).join("");
   renderProgress(a);
 }
