@@ -14,5 +14,8 @@ The owner is new to coding. Explain things in plain language and give click-by-c
 - Cloud sessions can't reach api.tcgdex.net or api.pokemontcg.io (egress blocked). Test in Playwright with mocked API responses, and tell the owner what couldn't be verified live.
 - Don't break existing saved data: keep the localStorage key and backup format compatible.
 
-## Known issues
-- Many cards show "No price data": TCGdex returns `pricing: null` for cards it hasn't linked to TCGplayer/Cardmarket (e.g. SVP promos, some older sets). A fallback price source is being considered.
+## Prices
+- Artist Binder uses TCGdex `pricing` first (TCGplayer USD, else Cardmarket EUR). TCGdex returns `pricing: null` for many cards.
+- Fallback for English cards: `prices.json`, built daily by `.github/workflows/prices.yml` running `scripts/build-prices.mjs`, which downloads TCGplayer prices from TCGCSV (https://tcgcsv.com, category 3). The app matches by normalized card number + name, then best set-name overlap. Keep `normNum`/`normName` identical in both files.
+- The workflow commits `prices.json` to the branch daily, so always `git pull` before pushing.
+- Japanese cards aren't covered by the fallback yet (TCGplayer category 85 uses English names; TCGdex `ja` names are Japanese).
