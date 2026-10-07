@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artist Binder: Pokémon TCG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --desk:#DCE3EC; --page:#F7F9FC; --ink:#1C2433; --muted:#5B6577; --line:#C6CFDB;
+  --cover:#2B3A55; --cover-ink:#F2F5FA; --accent:#1F7A8C; --gold:#D99A1E; --danger:#B2412F;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --gutter:clamp(1rem,4vw,2.5rem);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --desk:#141A24; --page:#1D2532; --ink:#E6EBF2; --muted:#9AA6B8; --line:#344055;
+    --cover:#0F1622; --cover-ink:#E6EBF2; --accent:#4FB3C6; --gold:#F0B743; --danger:#E0715E; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--desk);color:var(--ink);font:16px/1.5 var(--body)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* Frozen top section: title, add artist, backup, tabs, filters */
+.topbar{position:sticky;top:0;z-index:20;background:var(--cover);color:var(--cover-ink);box-shadow:0 6px 18px rgba(10,14,22,.22)}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.25rem;padding:.85rem var(--gutter) 0}
+h1{font:800 1.5rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:nowrap}
+.add{display:flex;gap:.5rem;flex:1 1 26rem;min-width:0}
+.add input{flex:1 1 auto;min-width:0;padding:.55rem .8rem;border-radius:10px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
+.add input::placeholder{color:rgba(242,245,250,.6)}
+.add select{padding:.55rem .5rem;border-radius:10px;border:0;background:rgba(255,255,255,.13);color:var(--cover-ink);max-width:9.5rem}
+.add select option{color:#1C2433}
+.tools{display:flex;gap:.5rem}
+.btn{padding:.55rem 1rem;border-radius:10px;border:0;background:var(--gold);color:#1C2433;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn.light{background:rgba(255,255,255,.13);color:var(--cover-ink);font-weight:400}
+
+.tabs{display:flex;gap:.4rem;overflow-x:auto;padding:.75rem var(--gutter) 0;margin:0;list-style:none;scrollbar-width:thin}
+.tab{display:flex;align-items:center;border-radius:10px 10px 0 0;background:rgba(255,255,255,.1);white-space:nowrap}
+.tab.on{background:var(--page);color:var(--ink)}
+.tab > button{border:0;background:none;padding:.45rem .3rem .45rem .85rem;cursor:pointer;text-align:left}
+.tab b{font-family:var(--display);font-weight:700}
+.tab small{display:block;opacity:.7;font-size:.76rem}
+.tab .x{padding:.45rem .65rem;opacity:.65;font-size:1.1rem;line-height:1}
+
+.toolbar{background:var(--page);color:var(--ink);padding:.75rem var(--gutter) .8rem;border-bottom:1px solid var(--line)}
+.tb-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;margin-bottom:.65rem}
+h2{font:800 clamp(1.3rem,3vw,1.75rem)/1.1 var(--display);margin:0;letter-spacing:-.02em}
+.count{font-family:var(--display);color:var(--muted);white-space:nowrap}
+.count strong{color:var(--ink);font-size:1.2rem}
+.bar{flex:1 1 8rem;height:8px;border-radius:99px;background:var(--line);overflow:hidden;min-width:6rem}
+.bar span{display:block;height:100%;background:var(--gold);transition:width .3s}
+.filters{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;padding:.4rem .8rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--page)}
+.filters input,.filters select{padding:.4rem .6rem;border:1px solid var(--line);border-radius:10px;background:var(--page);min-width:0}
+.filters input{flex:1 1 9rem}
+.filters select{max-width:14rem}
+
+main{background:var(--page);padding:1.25rem var(--gutter) 2.5rem calc(var(--gutter) + 2.25rem);position:relative;min-height:60vh}
+/* binder ring holes */
+main::before{content:"";position:absolute;left:calc(var(--gutter) * .45);top:0;bottom:0;width:18px;
+  background:radial-gradient(circle at 9px 50%, var(--desk) 7px, transparent 8px) 0 16.66%/18px 33.33% repeat-y}
+
+.status{color:var(--muted);margin:0 0 1rem}
+.status.err{color:var(--danger)}
+
+.grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1.25rem 1rem}
+.pocket{position:relative}
+.toggle{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;position:relative}
+.sleeve{display:block;aspect-ratio:63/88;border-radius:9px;overflow:hidden;position:relative;
+  outline:2px dashed var(--line);outline-offset:-2px;background:rgba(127,140,160,.12)}
+.sleeve img{width:100%;height:100%;object-fit:cover;display:block;opacity:.5;transition:opacity .25s}
+.sleeve::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.28) 45%,transparent 55%)}
+.noimg{position:absolute;inset:0;display:grid;place-items:center;padding:.5rem;text-align:center;color:var(--muted);font-size:.85rem}
+.owned .sleeve{outline:3px solid var(--gold)}
+.owned .sleeve img{opacity:1}
+.tag{position:absolute;top:.4rem;left:.4rem;font-size:.75rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;
+  background:var(--page);color:var(--muted);border:1px solid var(--line)}
+.owned .tag{background:var(--gold);color:#1C2433;border-color:var(--gold)}
+.zoom{position:absolute;top:.35rem;right:.35rem;width:2rem;height:2rem;border-radius:8px;border:0;cursor:pointer;
+  background:rgba(28,36,51,.7);color:#fff;font-size:1rem;line-height:1}
+.meta{padding:.5rem .1rem 0;font-size:.85rem;line-height:1.35}
+.meta strong{display:block;font-size:.95rem}
+.meta span{display:block;color:var(--muted)}
+
+.empty{max-width:34rem;padding:1rem 0}
+.empty h2{margin-bottom:.75rem;font-size:clamp(1.8rem,5vw,2.6rem)}
+footer{padding:1rem var(--gutter) 2rem;color:var(--muted);font-size:.9rem}
+
+dialog{border:0;padding:0;background:none;max-width:min(92vw,520px)}
+dialog::backdrop{background:rgba(10,14,22,.8)}
+dialog img{width:100%;border-radius:14px;display:block}
+dialog button{margin-top:.75rem;width:100%}
+
+@media (max-width:640px){
+  h1{font-size:1.25rem}
+  .add{flex-basis:100%}
+  .tools{margin-left:auto}
+  .filters select{flex:1 1 40%;max-width:none}
+  main{padding-left:calc(var(--gutter) + 1.75rem)}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <header>
+    <h1>Artist Binder</h1>
+    <form class="add" id="addForm">
+      <input id="artistInput" list="artistList" placeholder="Add an artist, e.g. Mitsuhiro Arita" autocomplete="off" aria-label="Artist name">
+      <datalist id="artistList"></datalist>
+      <select id="langInput" aria-label="Card language">
+        <option value="en">English</option><option value="ja">Japanese</option>
+        <option value="fr">French</option><option value="de">German</option>
+        <option value="es">Spanish</option><option value="it">Italian</option>
+        <option value="pt">Portuguese</option>
+      </select>
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div class="tools">
+      <button class="btn light" id="exportBtn">Save backup</button>
+      <button class="btn light" id="importBtn">Restore backup</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </header>
+  <ul class="tabs" id="tabs"></ul>
+  <div class="toolbar" id="toolbar" hidden></div>
+</div>
+
+<main id="main"></main>
+<footer>Card data and images from TCGdex. Your checkmarks are saved in this browser; use Save backup to keep a copy.</footer>
+
+<dialog id="zoomDlg"><img id="zoomImg" alt=""><button class="btn" id="zoomClose">Close</button></dialog>
+
+<script>
+const API = "https://api.tcgdex.net/v2";
+const KEY = "artistBinder.v1";
+
+let state = load() || { artists: [], owned: {}, details: {}, active: null };
+state.details = state.details || {};
+const ui = { view: "all", q: "", set: "", sort: state.sort || "name" };
+const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {} };
+
+function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
+let saveTimer;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }, 150); }
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const akey = a => a.lang + "|" + a.name;
+const ckey = (lang, id) => lang + ":" + id;
+const $ = id => document.getElementById(id);
+
+async function getJSON(url){
+  const r = await fetch(url);
+  if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+
+async function loadSets(lang){
+  if (mem.sets[lang]) return mem.sets[lang];
+  const list = await getJSON(`${API}/${lang}/sets`);
+  const map = {};
+  list.forEach((s, i) => map[s.id] = { name: s.name, idx: i });
+  return mem.sets[lang] = map;
+}
+
+async function loadNames(lang){
+  if (mem.names[lang]) return;
+  try {
+    mem.names[lang] = await getJSON(`${API}/${lang}/illustrators`);
+    if ($("langInput").value === lang) fillDatalist(lang);
+  } catch(e){}
+}
+function fillDatalist(lang){
+  $("artistList").innerHTML = (mem.names[lang] || []).filter(Boolean).map(n => `<option value="${esc(n)}">`).join("");
+}
+
+function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, i) : id; }
+
+async function loadArtist(a){
+  if (!a) return;
+  const k = akey(a);
+  if (mem.cards[k] || mem.loading[k]) return;
+  mem.loading[k] = true; delete mem.errors[k]; render();
+  try {
+    const [sets, data] = await Promise.all([
+      loadSets(a.lang),
+      getJSON(`${API}/${a.lang}/illustrators/${encodeURIComponent(a.name)}`)
+    ]);
+    const raw = Array.isArray(data) ? data : (data.cards || []);
+    mem.cards[k] = raw.map(c => {
+      const sid = setIdOf(c.id);
+      return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
+               setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
+    });
+    a.total = mem.cards[k].length; save();
+    fillDetails(a);
+  } catch(e){
+    mem.errors[k] = e.status === 404
+      ? `TCGdex has no artist named “${a.name}” for these cards. Names must match exactly; pick one from the suggestions as you type.`
+      : `Couldn’t reach TCGdex (${e.message}). Check your internet connection and reload. This page needs to be opened as a file in your browser, not inside a preview window.`;
+  } finally { delete mem.loading[k]; render(); }
+}
+
+// Fetch rarity and set names a few at a time; cached so it only happens once per card.
+async function fillDetails(a){
+  const cards = mem.cards[akey(a)] || [];
+  const todo = cards.filter(c => !state.details[ckey(a.lang, c.id)]);
+  let n = 0;
+  const worker = async () => {
+    while (todo.length){
+      const c = todo.shift();
+      try {
+        const d = await getJSON(`${API}/${a.lang}/cards/${encodeURIComponent(c.id)}`);
+        state.details[ckey(a.lang, c.id)] = { r: d.rarity || "", s: d.set?.name || "" };
+      } catch(e){ state.details[ckey(a.lang, c.id)] = { r: "", s: "" }; }
+      if (++n % 12 === 0) { save(); if (state.active === akey(a)) renderGrid(); }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  save(); if (state.active === akey(a)) renderGrid();
+}
+
+function activeArtist(){ return state.artists.find(a => akey(a) === state.active) || null; }
+function ownedCount(a){ return (mem.cards[akey(a)] || []).filter(c => state.owned[ckey(a.lang, c.id)]).length; }
+function langLabel(l){ return l === "en" ? "" : " (" + l.toUpperCase() + ")"; }
+function setName(a, c){ return c.setName || state.details[ckey(a.lang, c.id)]?.s || c.setId; }
+
+function renderTabs(){
+  $("tabs").innerHTML = state.artists.map(a => {
+    const k = akey(a), have = mem.cards[k] ? ownedCount(a) : null;
+    const sub = have === null ? (a.total ? `${a.total} cards` : "loading…") : `${have} of ${mem.cards[k].length} owned`;
+    return `<li class="tab ${k === state.active ? "on" : ""}">
+      <button data-open="${esc(k)}"><b>${esc(a.name)}${langLabel(a.lang)}</b><small>${sub}</small></button>
+      <button class="x" data-remove="${esc(k)}" aria-label="Remove ${esc(a.name)}">×</button></li>`;
+  }).join("");
+}
+
+function render(){
+  renderTabs();
+  const a = activeArtist(), m = $("main"), tb = $("toolbar");
+  if (!a){
+    tb.hidden = true;
+    m.innerHTML = `<div class="empty"><h2>Start your binder</h2>
+      <p>Type an artist’s name in the box above. Suggestions appear as you type, pulled from every illustrator credited in the TCGdex database. Add as many artists as you like; each gets its own tab.</p>
+      <p>Many artists have cards that were only released in Japan. If someone’s list looks short, add them again with Japanese selected.</p></div>`;
+    return;
+  }
+  const cards = mem.cards[akey(a)];
+  const sets = cards ? [...new Map(cards.map(c => [c.setId, c])).values()].sort((x,y) => x.order - y.order) : [];
+  tb.hidden = false;
+  tb.innerHTML = `
+    <div class="tb-head"><h2>${esc(a.name)}</h2><div class="count" id="count"></div><div class="bar"><span id="bar"></span></div></div>
+    <div class="filters">
+      <div class="seg" role="group" aria-label="Show">
+        ${["all","owned","missing"].map(v => `<button data-view="${v}" aria-pressed="${ui.view===v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join("")}
+      </div>
+      <input id="q" type="search" placeholder="Find a Pokémon" value="${esc(ui.q)}" aria-label="Find a Pokémon">
+      <select id="setSel" aria-label="Set"><option value="">All sets</option>
+        ${sets.map(c => `<option value="${esc(c.setId)}" ${ui.set===c.setId?"selected":""}>${esc(setName(a,c))}</option>`).join("")}</select>
+      <select id="sortSel" aria-label="Sort">
+        <option value="name" ${ui.sort==="name"?"selected":""}>Pokémon A–Z</option>
+        <option value="old" ${ui.sort==="old"?"selected":""}>Oldest sets first</option>
+        <option value="new" ${ui.sort==="new"?"selected":""}>Newest sets first</option>
+      </select>
+    </div>`;
+  m.innerHTML = `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
+  $("q").addEventListener("input", e => { ui.q = e.target.value; renderGrid(); });
+  $("setSel").addEventListener("change", e => { ui.set = e.target.value; renderGrid(); });
+  $("sortSel").addEventListener("change", e => { ui.sort = state.sort = e.target.value; save(); renderGrid(); });
+  renderGrid();
+}
+
+function renderProgress(a){
+  const cards = mem.cards[akey(a)] || [], have = ownedCount(a);
+  const pct = cards.length ? Math.round(have / cards.length * 100) : 0;
+  if ($("count")) $("count").innerHTML = `<strong>${have}</strong> of ${cards.length} owned (${pct}%)`;
+  if ($("bar")) $("bar").style.width = pct + "%";
+  renderTabs();
+}
+
+function renderGrid(){
+  const a = activeArtist(); if (!a || !$("grid")) return;
+  const k = akey(a), cards = mem.cards[k], st = $("status");
+  if (mem.errors[k]) { st.textContent = mem.errors[k]; st.className = "status err"; $("grid").innerHTML = ""; return; }
+  if (!cards) { st.textContent = "Loading cards from TCGdex…"; st.className = "status"; $("grid").innerHTML = ""; return; }
+  const q = ui.q.trim().toLowerCase();
+  let list = cards.filter(c => {
+    const own = !!state.owned[ckey(a.lang, c.id)];
+    if (ui.view === "owned" && !own) return false;
+    if (ui.view === "missing" && own) return false;
+    if (ui.set && c.setId !== ui.set) return false;
+    return !q || c.name.toLowerCase().includes(q);
+  });
+  const byNum = (x,y) => String(x.num).localeCompare(String(y.num), undefined, {numeric:true});
+  list.sort(ui.sort === "name" ? (x,y) => x.name.localeCompare(y.name) || x.order - y.order || byNum(x,y)
+          : ui.sort === "new" ? (x,y) => y.order - x.order || byNum(x,y)
+          : (x,y) => x.order - y.order || byNum(x,y));
+  st.className = "status";
+  st.textContent = cards.length === 0 ? "TCGdex lists no cards for this artist in this language."
+    : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
+  $("grid").innerHTML = list.map(c => {
+    const own = !!state.owned[ckey(a.lang, c.id)], d = state.details[ckey(a.lang, c.id)] || {};
+    const sn = setName(a, c);
+    const img = c.image ? `<img loading="lazy" src="${esc(c.image)}/low.webp" alt="${esc(c.name)}, ${esc(sn)}">`
+                        : `<span class="noimg">No image yet<br>${esc(c.name)}</span>`;
+    return `<li class="pocket ${own?"owned":""}" data-id="${esc(c.id)}">
+      <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
+        <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
+      ${c.image ? `<button class="zoom" data-zoom="${esc(c.image)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
+      <div class="meta"><strong>${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}</div></li>`;
+  }).join("");
+  renderProgress(a);
+}
+
+// Events
+$("langInput").addEventListener("change", e => { fillDatalist(e.target.value); loadNames(e.target.value); });
+$("addForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("artistInput").value.trim(), lang = $("langInput").value;
+  if (!name) return;
+  const a = { name, lang };
+  if (!state.artists.some(x => akey(x) === akey(a))) state.artists.push(a);
+  state.active = akey(a); ui.set = ""; ui.q = "";
+  $("artistInput").value = ""; save(); render(); window.scrollTo(0, 0);
+  loadArtist(state.artists.find(x => akey(x) === akey(a)));
+});
+
+$("tabs").addEventListener("click", e => {
+  const open = e.target.closest("[data-open]"), rm = e.target.closest("[data-remove]");
+  if (rm){
+    const k = rm.dataset.remove, a = state.artists.find(x => akey(x) === k);
+    if (!confirm(`Remove ${a.name} from your binder? Your owned checkmarks are kept if you add them again.`)) return;
+    state.artists = state.artists.filter(x => akey(x) !== k);
+    if (state.active === k) state.active = state.artists[0] ? akey(state.artists[0]) : null;
+    save(); render(); loadArtist(activeArtist());
+  } else if (open){
+    state.active = open.dataset.open; ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
+    loadArtist(activeArtist());
+  }
+});
+
+function onPageClick(e){
+  const v = e.target.closest("[data-view]");
+  if (v){ ui.view = v.dataset.view; document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b === v)); renderGrid(); return; }
+  const z = e.target.closest("[data-zoom]");
+  if (z){ $("zoomImg").src = z.dataset.zoom + "/high.webp"; $("zoomDlg").showModal(); return; }
+  const t = e.target.closest(".toggle");
+  if (t){
+    const a = activeArtist(), li = t.closest(".pocket"), k = ckey(a.lang, li.dataset.id);
+    if (state.owned[k]) delete state.owned[k]; else state.owned[k] = true;
+    const own = !!state.owned[k];
+    li.classList.toggle("owned", own); t.setAttribute("aria-pressed", own);
+    li.querySelector(".tag").textContent = own ? "Owned" : "Missing";
+    save(); renderProgress(a);
+    if (ui.view !== "all") setTimeout(renderGrid, 250);
+  }
+}
+$("main").addEventListener("click", onPageClick);
+$("toolbar").addEventListener("click", onPageClick);
+$("zoomClose").addEventListener("click", () => $("zoomDlg").close());
+$("zoomDlg").addEventListener("click", e => { if (e.target === $("zoomDlg")) $("zoomDlg").close(); });
+
+$("exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({ artists: state.artists, owned: state.owned }, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `artist-binder-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$("importBtn").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.artists) || typeof d.owned !== "object") throw new Error();
+    state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
+    state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
+    save(); render(); state.artists.forEach(loadArtist);
+  } catch(err){ alert("That file isn’t an Artist Binder backup. Choose a file saved with “Save backup”."); }
+  e.target.value = "";
+});
+
+// Start
+loadNames("en");
+render();
+loadArtist(activeArtist());
+state.artists.forEach(a => { if (akey(a) !== state.active) loadArtist(a); });
+</script>
+</body>
+</html>
