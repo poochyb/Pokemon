@@ -141,7 +141,7 @@ dialog button{margin-top:.75rem;width:100%}
 </div>
 
 <main id="main"></main>
-<footer>Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars; cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved in this browser; use Save backup to keep a copy.</footer>
+<footer>Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars (via TCGdex, or TCGCSV’s daily TCGplayer data when TCGdex has none); cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved in this browser; use Save backup to keep a copy.</footer>
 
 <dialog id="zoomDlg"><img id="zoomImg" alt=""><button class="btn" id="zoomClose">Close</button></dialog>
 
@@ -209,7 +209,46 @@ function pickPrice(pricing){
   return null;
 }
 const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toFixed(2);
-function priceOf(a, c){ return state.prices[ckey(a.lang, c.id)]; }
+// TCGdex price first. For English cards TCGdex can't price in dollars, fall back to
+// prices.json: TCGplayer prices downloaded daily by a GitHub Action (scripts/build-prices.mjs).
+function priceOf(a, c){
+  const pr = state.prices[ckey(a.lang, c.id)];
+  if (!pr || pr.p?.c === "USD" || a.lang !== "en") return pr;
+  const v = tcgplayerPrice(c, setName(a, c));
+  return v != null ? { p: { v, c: "USD" }, t: pr.t } : pr;
+}
+
+// Must match normNum/normName in scripts/build-prices.mjs.
+const normNum = s => String(s).split("/")[0].trim().toLowerCase().replace(/^([a-z]*)0+(?=\d)/, "$1");
+const normName = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/\s+-\s+[^-]*\d[^-]*$/, "").replace(/\([^)]*\)/g, "")
+  .toLowerCase().replace(/[^a-z0-9]/g, "");
+const SET_STOP = new Set(["set", "the", "and", "pokemon", "card", "cards", "series", "expansion"]);
+const setWords = s => new Set(String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/^[a-z0-9]+:\s*/, "").split(/[^a-z0-9]+/).map(w => w.replace(/s$/, "")).filter(w => w && !SET_STOP.has(w)));
+
+let tcgp = null;
+fetch("prices.json").then(r => r.ok ? r.json() : null).then(d => { if (d?.cards){ tcgp = d; render(); } }).catch(() => {});
+
+function tcgplayerPrice(c, sn){
+  if (!tcgp) return null;
+  const name = normName(c.name);
+  let cands = (tcgp.cards[normNum(c.num)] || []).filter(x => x[1] === name);
+  if (!cands.length) cands = (tcgp.cards[normNum(c.num)] || []).filter(x => x[1].startsWith(name) || name.startsWith(x[1]));
+  if (!cands.length) return null;
+  // Same name and number can appear in several sets; pick the set whose name matches best.
+  const want = setWords(sn);
+  if (!want.size) return cands.length === 1 ? cands[0][2] : null;
+  let best = null, bestScore = 0;
+  for (const x of cands){
+    const have = setWords(tcgp.sets[x[0]]);
+    const shared = [...want].filter(w => have.has(w)).length;
+    if (!shared) continue;
+    const score = shared / Math.min(want.size, have.size) + shared / (want.size + have.size); // overlap, then closeness
+    if (score > bestScore){ best = x; bestScore = score; }
+  }
+  return best ? best[2] : null;
+}
 function sumValue(entries){
   const t = { USD: 0, EUR: 0 };
   entries.forEach(p => { if (p?.p) t[p.p.c] += p.p.v; });
@@ -330,7 +369,7 @@ function renderTotal(){
   const seen = new Map();
   state.artists.forEach(a => (mem.cards[akey(a)] || []).forEach(c => {
     const k = ckey(a.lang, c.id);
-    if (state.owned[k]) seen.set(k, state.prices[k]);
+    if (state.owned[k]) seen.set(k, priceOf(a, c));
   }));
   $("total").hidden = seen.size === 0;
   $("total").innerHTML = `My binder: <strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
