@@ -27,22 +27,24 @@ button,input,select{font:inherit;color:inherit}
 
 /* Frozen top section: title, add artist, backup, tabs, filters */
 .topbar{position:sticky;top:0;z-index:20;background:var(--cover);color:var(--cover-ink);box-shadow:0 6px 18px rgba(10,14,22,.22)}
-header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;padding:.5rem var(--gutter) 0}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .65rem;padding:.5rem var(--gutter) 0}
 h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:nowrap}
 .add{display:flex;gap:.4rem;flex:0 1 auto;min-width:0}
-.add input{flex:0 1 11rem;width:11rem;min-width:0;padding:.35rem .7rem;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
+.add input{flex:0 1 10rem;width:10rem;min-width:0;padding:.35rem .7rem;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
 .add input::placeholder{color:rgba(242,245,250,.6)}
-.add select{padding:.35rem .4rem;border-radius:8px;border:0;background:rgba(255,255,255,.13);color:var(--cover-ink);max-width:7.5rem}
+.add select{padding:.35rem .4rem;border-radius:8px;border:0;background:rgba(255,255,255,.13);color:var(--cover-ink);max-width:6.5rem}
 .add select option{color:#1C2433}
 .tools{display:flex;gap:.4rem;position:relative}
+#shareBtn{margin-left:auto}
 .cats{display:inline-flex;border-radius:9px;background:rgba(255,255,255,.1);padding:2px}
-.cats button{border:0;background:none;color:var(--cover-ink);padding:.25rem .75rem;border-radius:7px;cursor:pointer;white-space:nowrap;opacity:.8}
+.cats button{border:0;background:none;color:var(--cover-ink);padding:.25rem .6rem;border-radius:7px;cursor:pointer;white-space:nowrap;opacity:.8}
 .cats button[aria-pressed="true"]{background:var(--gold);color:#1C2433;font-weight:700;opacity:1}
 body.cat-ex .add{display:none}
 .btn{padding:.35rem .85rem;border-radius:8px;border:0;background:var(--gold);color:#1C2433;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn.light{background:rgba(255,255,255,.13);color:var(--cover-ink);font-weight:400}
 
-.tabs{display:flex;gap:.3rem;overflow-x:auto;padding:.45rem var(--gutter) 0;margin:0;list-style:none;scrollbar-width:thin}
+.tabrow{display:flex;align-items:center;gap:.75rem;padding-right:var(--gutter)}
+.tabs{flex:1 1 auto;min-width:0;display:flex;gap:.3rem;overflow-x:auto;padding:.45rem 0 0 var(--gutter);margin:0;list-style:none;scrollbar-width:thin}
 .tab{display:flex;align-items:center;border-radius:8px 8px 0 0;background:rgba(255,255,255,.1);white-space:nowrap}
 .tab.on{background:var(--page);color:var(--ink)}
 .tab > button{border:0;background:none;padding:.3rem .2rem .3rem .7rem;cursor:pointer;text-align:left}
@@ -96,7 +98,7 @@ main::before{content:"";position:absolute;left:calc(var(--gutter) * .45);top:0;b
 .meta .price{color:var(--ink);font-weight:700;font-family:var(--display);font-size:.95rem}
 .meta .price.muted{color:var(--muted);font-weight:400;font-family:var(--body);font-size:.8rem}
 .count small,.total small{opacity:.75;font-size:.8rem}
-.total{font-family:var(--display);white-space:nowrap;margin-left:auto}
+.total{font-family:var(--display);white-space:nowrap;padding-top:.45rem}
 .total strong{color:var(--gold);font-size:1.05rem}
 .viewing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem 1rem;
   padding:.4rem var(--gutter);background:var(--gold);color:#1C2433;font-weight:700;font-size:.9rem}
@@ -127,15 +129,14 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 dialog img{width:100%;border-radius:14px;display:block}
 dialog button{margin-top:.75rem;width:100%}
 
-@media (max-width:1500px){ .total small{display:none} }
+@media (max-width:900px){ .total small{display:none} }
 @media (max-width:640px){
   h1{font-size:1.1rem}
   .add{flex-basis:100%;order:3}
   .add input{flex:1 1 auto;width:auto}
   h1{flex-basis:100%}
-  .total{margin-left:0}
-  .total small{display:none}
-  .tools{margin-left:auto}
+  .total small,.total .lbl{display:none}
+  #shareBtn,.tools{margin-left:0}
   .filters select{flex:1 1 40%;max-width:none}
   main{padding-left:calc(var(--gutter) + 1.75rem)}
   .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
@@ -163,7 +164,6 @@ dialog button{margin-top:.75rem;width:100%}
       </select>
       <button class="btn" type="submit">Add</button>
     </form>
-    <div class="total" id="total" hidden></div>
     <button class="btn light" id="shareBtn">Share</button>
     <details class="tools menu" id="backupMenu">
       <summary class="btn light">Backup ▾</summary>
@@ -174,7 +174,10 @@ dialog button{margin-top:.75rem;width:100%}
       <input type="file" id="importFile" accept="application/json" hidden>
     </details>
   </header>
-  <ul class="tabs" id="tabs"></ul>
+  <div class="tabrow">
+    <ul class="tabs" id="tabs"></ul>
+    <div class="total" id="total" hidden></div>
+  </div>
   <div class="toolbar" id="toolbar" hidden></div>
 </div>
 
@@ -218,7 +221,11 @@ const isMega = name => /^(M|Mega)\s/.test(name);
 // Both eras: "EX" (2012–2016, e.g. "M Charizard EX") and "ex" (2003–2007 and 2023 on, e.g. "Mega Gallade ex").
 // Needs a space or dash before it, so names like "Exeggcute" or "Pokédex" don't count.
 const isEX = name => /[\s-]ex$/i.test(name);
-const lkey = a => a.kind === "ex" ? "cat:ex" : akey(a); // key for loaded card lists
+const pkey = p => "poke|" + p.lang + "|" + p.name;
+const lkey = a => a.kind === "ex" ? "cat:ex" : a.kind === "poke" ? pkey(a) : akey(a); // key for loaded card lists
+// Pokémon category: one sub-tab per Pokémon you add (like artists).
+state.pokemon = (state.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
+state.activePoke = state.activePoke || null;
 state.cat = state.cat || "artists";
 state.exSub = "all"; // older versions also had "EX" / "Mega EX" tabs
 const ckey = (lang, id) => lang + ":" + id;
@@ -245,8 +252,18 @@ async function loadNames(lang){
     if ($("langInput").value === lang) fillDatalist(lang);
   } catch(e){}
 }
+// Suggestions while typing: artist names from TCGdex, or Pokémon names from pokemon-names.json (from PokeAPI).
+let pokeNames = null;
+fetch("pokemon-names.json").then(r => r.ok ? r.json() : null).then(d => { pokeNames = d; fillDatalist($("langInput").value); }).catch(() => {});
 function fillDatalist(lang){
-  $("artistList").innerHTML = (mem.names[lang] || []).filter(Boolean).map(n => `<option value="${esc(n)}">`).join("");
+  const names = state.cat === "poke" ? (pokeNames?.[lang] || pokeNames?.en || []) : (mem.names[lang] || []);
+  $("artistList").innerHTML = names.filter(Boolean).map(n => `<option value="${esc(n)}">`).join("");
+}
+function updateAddBox(){
+  const poke = state.cat === "poke";
+  $("artistInput").placeholder = poke ? "Add a Pokémon…" : "Add an artist…";
+  $("artistInput").setAttribute("aria-label", poke ? "Pokémon name" : "Artist name");
+  fillDatalist($("langInput").value);
 }
 
 // Market value from TCGdex: TCGplayer (US dollars) first, Cardmarket (euros) if TCGplayer has nothing.
@@ -323,6 +340,7 @@ function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, 
 async function loadArtist(a){
   if (!a) return;
   if (a.kind === "ex") return loadEx();
+  if (a.kind === "poke") return loadPokemon(a);
   const k = akey(a);
   if (mem.cards[k] || mem.loading[k]) return;
   mem.loading[k] = true; delete mem.errors[k]; render();
@@ -343,6 +361,40 @@ async function loadArtist(a){
     mem.errors[k] = e.status === 404
       ? `TCGdex has no artist named “${a.name}” for these cards. Names must match exactly; pick one from the suggestions as you type.`
       : `Couldn’t reach TCGdex (${e.message}). Check your internet connection and reload. This page needs to be opened as a file in your browser, not inside a preview window.`;
+  } finally { delete mem.loading[k]; render(); }
+}
+
+// Does a card name belong to this Pokémon? "Mew" matches "Mew ex" and "Mew & Mewtwo-GX" but not "Mewtwo";
+// "Porygon" doesn't match "Porygon-Z" or "Porygon2".
+const pokeNorm = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/[’‘`]/g, "'").replace(/\s+(?=[♀♂])/g, "");
+function isCardOf(cardName, poke){
+  const n = pokeNorm(cardName), t = pokeNorm(poke);
+  if (/[^\x00-\x7f♀♂]/.test(t)) return n.includes(t); // Japanese etc.: no word spacing to check
+  const re = new RegExp("(^|[^a-z0-9])" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^a-z0-9-]|-(ex|gx)\\b)");
+  return re.test(n);
+}
+async function loadPokemon(a){
+  const k = lkey(a);
+  if (mem.cards[k] || mem.loading[k]) return;
+  mem.loading[k] = true; delete mem.errors[k]; render();
+  try {
+    // Search on the longest word of the name (avoids apostrophes etc.), then keep only real matches.
+    const term = a.name.split(/[^\p{L}\p{N}]+/u).sort((x, y) => y.length - x.length)[0] || a.name;
+    const [sets, raw] = await Promise.all([
+      loadSets(a.lang),
+      getJSON(`${API}/${a.lang}/cards?name=${encodeURIComponent(term)}`).catch(e => { if (e.status === 404) return []; throw e; })
+    ]);
+    mem.cards[k] = raw.filter(c => isCardOf(c.name, a.name)).map(c => {
+      const sid = setIdOf(c.id);
+      return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
+               setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
+    });
+    if (!mem.cards[k].length) mem.errors[k] = `TCGdex has no cards named “${a.name}” in this language. Check the spelling, or pick a name from the suggestions as you type.`;
+    a.total = mem.cards[k].length; save();
+    fillDetails(a);
+  } catch(e){
+    mem.errors[k] = `Couldn’t reach TCGdex (${e.message}). Check your internet connection and reload.`;
   } finally { delete mem.loading[k]; render(); }
 }
 
@@ -400,7 +452,8 @@ async function fillDetails(a, ownedOnly = false){
 
 function activeArtist(){ return state.artists.find(a => akey(a) === state.active) || null; }
 // The list on screen: the chosen artist, or the EX category.
-function activeList(){ return state.cat === "ex" ? EX_LIST : activeArtist(); }
+function activePoke(){ return state.pokemon.find(p => pkey(p) === state.activePoke) || null; }
+function activeList(){ return state.cat === "ex" ? EX_LIST : state.cat === "poke" ? activePoke() : activeArtist(); }
 function isShowing(a){ const cur = activeList(); return !!cur && lkey(cur) === lkey(a); }
 // Cards in a list; for EX, narrowed to the chosen sub-tab (All / EX / Mega EX).
 function cardsOf(a, sub = state.exSub){
@@ -409,12 +462,16 @@ function cardsOf(a, sub = state.exSub){
   return cards.filter(c => sub === "mega" ? isMega(c.name) : !isMega(c.name));
 }
 function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => state.owned[ckey(a.lang, c.id)]).length; }
-function allLists(){ return [...state.artists, EX_LIST]; }
+function allLists(){ return [...state.artists, ...state.pokemon, EX_LIST]; }
+// The add-able lists (artists or Pokémon) for the current category, and which one is open.
+const userLists = () => state.cat === "poke" ? state.pokemon : state.artists;
+const activeKeyOf = () => state.cat === "poke" ? state.activePoke : state.active;
+function setActiveKey(k){ if (state.cat === "poke") state.activePoke = k; else state.active = k; }
 function langLabel(l){ return l === "en" ? "" : " (" + l.toUpperCase() + ")"; }
 function setName(a, c){ return c.setName || state.details[ckey(a.lang, c.id)]?.s || c.setId; }
 
 function renderCats(){
-  $("cats").innerHTML = [["artists", "Artists"], ["ex", "EX / Mega EX"]].map(([v, label]) =>
+  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
   document.body.classList.toggle("cat-ex", state.cat === "ex");
 }
@@ -429,10 +486,10 @@ function renderTabs(){
     }).join("");
     return;
   }
-  $("tabs").innerHTML = state.artists.map(a => {
-    const k = akey(a), have = mem.cards[k] ? ownedCount(a) : null;
+  $("tabs").innerHTML = userLists().map(a => {
+    const k = lkey(a), have = mem.cards[k] ? ownedCount(a) : null;
     const sub = have === null ? (a.total ? `${a.total} cards` : "loading…") : `${have} of ${mem.cards[k].length} owned`;
-    return `<li class="tab ${k === state.active ? "on" : ""}">
+    return `<li class="tab ${k === activeKeyOf() ? "on" : ""}">
       <button data-open="${esc(k)}"><b>${esc(a.name)}${langLabel(a.lang)}</b><small>${sub}</small></button>
       <button class="x" data-remove="${esc(k)}" aria-label="Remove ${esc(a.name)}">×</button></li>`;
   }).join("");
@@ -444,7 +501,10 @@ function render(){
   const a = activeList(), m = $("main"), tb = $("toolbar");
   if (!a){
     tb.hidden = true;
-    m.innerHTML = `<div class="empty"><h2>Add your favorite artists</h2>
+    m.innerHTML = state.cat === "poke" ? `<div class="empty"><h2>Add your favorite Pokémon</h2>
+      <p>Type a Pokémon’s name in the box above (suggestions appear as you type) and click Add. You’ll see every card of that Pokémon, including its ex, V, GX and other versions. Add as many as you like; each gets its own tab.</p>
+      <p>Want Japanese cards too? Choose Japanese next to the box and add the Pokémon again.</p></div>`
+    : `<div class="empty"><h2>Add your favorite artists</h2>
       <p>Type an artist’s name in the box above. Suggestions appear as you type, pulled from every illustrator credited in the TCGdex database. Add as many artists as you like; each gets its own tab.</p>
       <p>Many artists have cards that were only released in Japan. If someone’s list looks short, add them again with Japanese selected.</p></div>`;
     return;
@@ -483,7 +543,7 @@ function renderTotal(){
     if (state.owned[k]) seen.set(k, priceOf(a, c));
   }));
   $("total").hidden = seen.size === 0;
-  $("total").innerHTML = `${viewOnly ? "Binder" : "My binder"}: <strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
+  $("total").innerHTML = `<span class="lbl">${viewOnly ? "Binder" : "My binder"}: </span><strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
 }
 
 function renderProgress(a){
@@ -545,32 +605,34 @@ $("addForm").addEventListener("submit", e => {
   e.preventDefault();
   const name = $("artistInput").value.trim(), lang = $("langInput").value;
   if (!name) return;
-  const a = { name, lang };
-  if (!state.artists.some(x => akey(x) === akey(a))) state.artists.push(a);
-  state.active = akey(a); state.cat = "artists"; ui.set = ""; ui.q = "";
+  if (state.cat === "ex") state.cat = "artists";
+  const a = state.cat === "poke" ? { name, lang, kind: "poke" } : { name, lang }, list = userLists();
+  if (!list.some(x => lkey(x) === lkey(a))) list.push(a);
+  setActiveKey(lkey(a)); ui.set = ""; ui.q = "";
   $("artistInput").value = ""; save(); render(); window.scrollTo(0, 0);
-  loadArtist(state.artists.find(x => akey(x) === akey(a)));
+  loadArtist(list.find(x => lkey(x) === lkey(a)));
 });
 
 $("cats").addEventListener("click", e => {
   const b = e.target.closest("[data-cat]"); if (!b || b.dataset.cat === state.cat) return;
   state.cat = b.dataset.cat; ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
+  updateAddBox();
   if (state.cat === "ex"){ loadEx(); if (mem.cards[lkey(EX_LIST)]) fillDetails(EX_LIST); }
-  else loadArtist(activeArtist());
+  else loadArtist(activeList());
 });
 
 $("tabs").addEventListener("click", e => {
   const open = e.target.closest("[data-open]"), rm = e.target.closest("[data-remove]"), sub = e.target.closest("[data-sub]");
   if (sub){ state.exSub = sub.dataset.sub; ui.set = ""; save(); render(); return; }
   if (rm){
-    const k = rm.dataset.remove, a = state.artists.find(x => akey(x) === k);
-    if (!confirm(`Remove ${a.name} from your binder? Your owned checkmarks are kept if you add them again.`)) return;
-    state.artists = state.artists.filter(x => akey(x) !== k);
-    if (state.active === k) state.active = state.artists[0] ? akey(state.artists[0]) : null;
-    save(); render(); loadArtist(activeArtist());
+    const k = rm.dataset.remove, list = userLists(), i = list.findIndex(x => lkey(x) === k);
+    if (i < 0 || !confirm(`Remove ${list[i].name}? Your owned checkmarks are kept, and come back if you add it again.`)) return;
+    list.splice(i, 1);
+    if (activeKeyOf() === k) setActiveKey(list[0] ? lkey(list[0]) : null);
+    save(); render(); loadArtist(activeList());
   } else if (open){
-    state.active = open.dataset.open; ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
-    loadArtist(activeArtist());
+    setActiveKey(open.dataset.open); ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
+    loadArtist(activeList());
   }
 });
 
@@ -596,7 +658,7 @@ $("zoomClose").addEventListener("click", () => $("zoomDlg").close());
 $("zoomDlg").addEventListener("click", e => { if (e.target === $("zoomDlg")) $("zoomDlg").close(); });
 
 $("exportBtn").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ artists: state.artists, owned: state.owned }, null, 1)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), owned: state.owned }, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = `artist-binder-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -608,8 +670,10 @@ $("importFile").addEventListener("change", async e => {
     const d = JSON.parse(await f.text());
     if (!Array.isArray(d.artists) || typeof d.owned !== "object") throw new Error();
     state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
+    state.pokemon = (d.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
+    state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
     state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
-    save(); render(); state.artists.forEach(loadArtist);
+    save(); render(); allLists().forEach(loadArtist);
   } catch(err){ alert("That file isn’t an Artist Binder backup. Choose a file saved with “Save backup”."); }
   e.target.value = "";
 });
@@ -653,16 +717,16 @@ async function decodeShare(code){
 
 function shareData(){
   // Group owned card ids by language, only for languages of artists in the binder.
-  const langs = new Set([...state.artists.map(a => a.lang), "en"]), owned = {};
+  const langs = new Set([...state.artists.map(a => a.lang), ...state.pokemon.map(p => p.lang), "en"]), owned = {};
   Object.keys(state.owned).forEach(k => {
     const i = k.indexOf(":"), lang = k.slice(0, i);
     if (langs.has(lang)) (owned[lang] ||= []).push(k.slice(i + 1));
   });
-  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), o: owned, c: state.cat };
+  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), o: owned, c: state.cat };
 }
 
 $("shareBtn").addEventListener("click", async () => {
-  if (!state.artists.length && !Object.keys(state.owned).length){ alert("Mark some cards as owned first, then share."); return; }
+  if (!state.artists.length && !state.pokemon.length && !Object.keys(state.owned).length){ alert("Mark some cards as owned first, then share."); return; }
   const url = location.origin + location.pathname + "#share=" + await encodeShare(shareData());
   $("shareUrl").value = url;
   $("copyShare").textContent = "Copy link";
@@ -688,8 +752,10 @@ async function openShared(code){
   Object.entries(d.o || {}).forEach(([lang, ids]) => ids.forEach(id => owned[lang + ":" + id] = true));
   const mine = state; // reuse this browser's cached card details and prices; nothing is saved
   state = { artists: d.a.map(([name, lang]) => ({ name, lang })), owned, details: mine.details, prices: mine.prices, active: null,
-            cat: d.c === "ex" ? "ex" : "artists", exSub: "all" };
+            pokemon: (d.p || []).map(([name, lang]) => ({ name, lang, kind: "poke" })),
+            cat: ["ex", "poke"].includes(d.c) ? d.c : "artists", exSub: "all" };
   state.active = state.artists[0] ? akey(state.artists[0]) : null;
+  state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
   viewOnly = true; ui.view = "owned";
   document.body.classList.add("view-only");
   $("viewing").hidden = false;
@@ -706,9 +772,9 @@ async function openShared(code){
   }
   loadNames("en");
   render();
+  updateAddBox();
   loadArtist(activeList());
-  state.artists.forEach(a => { if (akey(a) !== state.active) loadArtist(a); });
-  loadEx();
+  allLists().forEach(loadArtist);
 })();
 </script>
 </body>
