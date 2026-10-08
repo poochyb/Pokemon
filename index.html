@@ -44,7 +44,18 @@ body.cat-ex .add{display:none}
 .btn.light{background:rgba(255,255,255,.13);color:var(--cover-ink);font-weight:400}
 
 .tabrow{display:flex;align-items:center;gap:.75rem;padding-right:var(--gutter)}
-.tabs{flex:1 1 auto;min-width:0;display:flex;gap:.3rem;overflow-x:auto;padding:.45rem 0 0 var(--gutter);margin:0;list-style:none;scrollbar-width:thin}
+.tabwrap{position:relative;flex:1 1 auto;min-width:0}
+.tabs{display:flex;gap:.3rem;overflow-x:auto;padding:.45rem 0 0 var(--gutter);margin:0;list-style:none;scrollbar-width:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.tabs::-webkit-scrollbar{display:none}
+/* « » arrows that appear when there are more tabs than fit */
+.more{position:absolute;top:.45rem;bottom:0;z-index:2;width:2.4rem;border:0;cursor:pointer;color:var(--gold);
+  font:800 1.25rem/1 var(--display);padding:0}
+.more.left{left:0;text-align:left;padding-left:.35rem;background:linear-gradient(90deg,var(--cover) 55%,transparent)}
+.more.right{right:0;text-align:right;padding-right:.35rem;background:linear-gradient(270deg,var(--cover) 55%,transparent)}
+/* drag to reorder */
+.tab.dragging{opacity:.85;outline:2px dashed var(--gold);outline-offset:-2px;cursor:grabbing}
+.tabs.sorting .tab > button{cursor:grabbing}
 .tab{display:flex;align-items:center;border-radius:8px 8px 0 0;background:rgba(255,255,255,.1);white-space:nowrap}
 .tab.on{background:var(--page);color:var(--ink)}
 .tab > button{border:0;background:none;padding:.3rem .2rem .3rem .7rem;cursor:pointer;text-align:left}
@@ -175,7 +186,11 @@ dialog button{margin-top:.75rem;width:100%}
     </details>
   </header>
   <div class="tabrow">
-    <ul class="tabs" id="tabs"></ul>
+    <div class="tabwrap">
+      <button class="more left" id="tabsLeft" aria-label="Scroll tabs left" hidden>«</button>
+      <ul class="tabs" id="tabs"></ul>
+      <button class="more right" id="tabsRight" aria-label="More tabs: scroll right" hidden>»</button>
+    </div>
     <div class="total" id="total" hidden></div>
   </div>
   <div class="toolbar" id="toolbar" hidden></div>
@@ -478,21 +493,36 @@ function renderCats(){
 
 function renderTabs(){
   renderCats();
+  if (drag) return; // don't redraw tabs mid-drag; endDrag redraws them
   if (state.cat === "ex"){
     const all = mem.cards[lkey(EX_LIST)];
     $("tabs").innerHTML = EX_SUBS.map(([v, label]) => {
-      const sub = all ? `${ownedCount(EX_LIST, v)} of ${cardsOf(EX_LIST, v).length} owned` : "loading…";
-      return `<li class="tab ${state.exSub === v ? "on" : ""}"><button data-sub="${v}"><b>${label}</b><small>${sub}</small></button></li>`;
+      const [sub, tip] = all ? pctLabel(ownedCount(EX_LIST, v), cardsOf(EX_LIST, v).length) : ["…", "Loading…"];
+      return `<li class="tab ${state.exSub === v ? "on" : ""}"><button data-sub="${v}" title="${tip}"><b>${label}</b><small>${sub}</small></button></li>`;
     }).join("");
+    updateTabArrows();
     return;
   }
   $("tabs").innerHTML = userLists().map(a => {
     const k = lkey(a), have = mem.cards[k] ? ownedCount(a) : null;
-    const sub = have === null ? (a.total ? `${a.total} cards` : "loading…") : `${have} of ${mem.cards[k].length} owned`;
-    return `<li class="tab ${k === activeKeyOf() ? "on" : ""}">
-      <button data-open="${esc(k)}"><b>${esc(a.name)}${langLabel(a.lang)}</b><small>${sub}</small></button>
+    const [sub, tip] = have === null ? ["…", "Loading…"] : pctLabel(have, mem.cards[k].length);
+    return `<li class="tab ${k === activeKeyOf() ? "on" : ""}" data-key="${esc(k)}">
+      <button data-open="${esc(k)}" title="${tip}"><b>${esc(a.name)}${langLabel(a.lang)}</b><small>${sub}</small></button>
       <button class="x" data-remove="${esc(k)}" aria-label="Remove ${esc(a.name)}">×</button></li>`;
   }).join("");
+  updateTabArrows();
+}
+// Tabs show just the percentage; hovering shows "3 of 16 owned (19%)", and the open tab's details are in the bar below.
+function pctLabel(have, total){
+  const pct = total ? Math.round(have / total * 100) : 0;
+  return [`${pct}%`, `${have} of ${total} owned (${pct}%)`];
+}
+
+// « » arrows: show them only when tabs are hidden off that side.
+function updateTabArrows(){
+  const ul = $("tabs"), max = ul.scrollWidth - ul.clientWidth;
+  $("tabsLeft").hidden = ul.scrollLeft <= 2;
+  $("tabsRight").hidden = ul.scrollLeft >= max - 2;
 }
 
 function render(){
@@ -621,7 +651,58 @@ $("cats").addEventListener("click", e => {
   else loadArtist(activeList());
 });
 
+$("tabs").addEventListener("scroll", updateTabArrows, { passive: true });
+new ResizeObserver(updateTabArrows).observe($("tabs"));
+$("tabsLeft").addEventListener("click", () => $("tabs").scrollBy({ left: -$("tabs").clientWidth * .7, behavior: "smooth" }));
+$("tabsRight").addEventListener("click", () => $("tabs").scrollBy({ left: $("tabs").clientWidth * .7, behavior: "smooth" }));
+
+// Drag tabs to reorder artists / Pokémon. Mouse: press and drag. Touch: press and hold for a moment, then drag.
+let drag = null, suppressClick = false;
+$("tabs").addEventListener("pointerdown", e => {
+  if (viewOnly || state.cat === "ex" || e.button > 0) return;
+  const li = e.target.closest(".tab[data-key]"); if (!li || e.target.closest(".x")) return;
+  drag = { li, id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false, touch: e.pointerType !== "mouse" };
+  if (drag.touch) drag.timer = setTimeout(startDrag, 350);
+});
+function startDrag(){
+  if (!drag) return;
+  drag.active = true; drag.li.classList.add("dragging"); $("tabs").classList.add("sorting");
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.active){
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8){
+      if (drag.touch){ clearTimeout(drag.timer); drag = null; } // moved before the hold: it's a scroll, not a drag
+      else startDrag();
+    }
+    return;
+  }
+  e.preventDefault();
+  const ul = $("tabs"), r = ul.getBoundingClientRect();
+  if (e.clientX < r.left + 40) ul.scrollLeft -= 12; else if (e.clientX > r.right - 40) ul.scrollLeft += 12;
+  const before = [...ul.children].filter(x => x !== drag.li)
+    .find(x => { const b = x.getBoundingClientRect(); return e.clientX < b.left + b.width / 2; });
+  if (before !== drag.li.nextSibling) ul.insertBefore(drag.li, before || null);
+});
+$("tabs").addEventListener("touchmove", e => { if (drag?.active) e.preventDefault(); }, { passive: false });
+$("tabs").addEventListener("contextmenu", e => { if (drag) e.preventDefault(); });
+function endDrag(e){
+  if (!drag || (e && e.pointerId !== drag.id)) return;
+  clearTimeout(drag.timer);
+  const wasActive = drag.active; drag = null;
+  $("tabs").classList.remove("sorting");
+  if (!wasActive) return;
+  const order = [...$("tabs").children].map(li => li.dataset.key);
+  userLists().sort((a, b) => order.indexOf(lkey(a)) - order.indexOf(lkey(b)));
+  suppressClick = true; setTimeout(() => suppressClick = false, 0);
+  save(); renderTabs();
+}
+addEventListener("pointerup", endDrag);
+addEventListener("pointercancel", endDrag);
+
 $("tabs").addEventListener("click", e => {
+  if (suppressClick) return;
   const open = e.target.closest("[data-open]"), rm = e.target.closest("[data-remove]"), sub = e.target.closest("[data-sub]");
   if (sub){ state.exSub = sub.dataset.sub; ui.set = ""; save(); render(); return; }
   if (rm){
