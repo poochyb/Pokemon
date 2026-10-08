@@ -215,7 +215,9 @@ const akey = a => a.lang + "|" + a.name;
 const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
 const EX_SUBS = [["all", "All EX"], ["ex", "EX"], ["mega", "Mega EX"]];
 const isMega = name => /^(M|Mega)\s/.test(name);
-const isEX = name => /[\s-]EX$/.test(name); // uppercase EX only (2012–2016 era), not lowercase "ex"
+// Both eras: "EX" (2012–2016, e.g. "M Charizard EX") and "ex" (2003–2007 and 2023 on, e.g. "Mega Gallade ex").
+// Needs a space or dash before it, so names like "Exeggcute" or "Pokédex" don't count.
+const isEX = name => /[\s-]ex$/i.test(name);
 const lkey = a => a.kind === "ex" ? "cat:ex" : akey(a); // key for loaded card lists
 state.cat = state.cat || "artists";
 state.exSub = state.exSub || "all";
@@ -344,16 +346,18 @@ async function loadArtist(a){
   } finally { delete mem.loading[k]; render(); }
 }
 
-// Every card whose name ends in "EX" (e.g. "Mewtwo EX", "M Charizard EX"), English only.
+// Every card whose name ends in "EX" or "ex" (e.g. "M Charizard EX", "Mega Gallade ex"), English only.
 async function loadEx(){
   const a = EX_LIST, k = lkey(a);
   if (mem.cards[k] || mem.loading[k]) return;
   mem.loading[k] = true; delete mem.errors[k]; render();
   try {
     const sets = await loadSets("en");
-    let raw;
-    try { raw = await getJSON(`${API}/en/cards?name=${encodeURIComponent("*EX")}`); }
-    catch(e){ raw = await getJSON(`${API}/en/cards?name=EX`); } // plain "contains" search as a fallback
+    // Ask for names ending in "EX" and in "ex" (in case the search is case-sensitive), then merge.
+    const ends = await Promise.all(["*EX", "*ex"].map(q => getJSON(`${API}/en/cards?name=${encodeURIComponent(q)}`).catch(() => null)));
+    let raw = ends.filter(Boolean).flat();
+    if (!ends.some(Boolean)) raw = await getJSON(`${API}/en/cards?name=ex`); // plain "contains" search as a fallback
+    raw = [...new Map(raw.map(c => [c.id, c])).values()];
     mem.cards[k] = raw.filter(c => isEX(c.name)).map(c => {
       const sid = setIdOf(c.id);
       return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
