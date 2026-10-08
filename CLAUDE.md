@@ -4,7 +4,7 @@ The owner is new to coding. Explain things in plain language and give click-by-c
 
 ## Apps (plain HTML/CSS/JS, no build step)
 - `index.html`: **Artist Binder** (page title "Howard’s Pokémon TCG Collection"), the main app. Self-contained single file. Uses the TCGdex API (https://api.tcgdex.net/v2). Tracks owned cards per illustrator, shows market prices and owned totals. Data lives in browser localStorage (key `artistBinder.v1`), with JSON backup/restore. A **Share** button makes a view-only snapshot link (`#share=` + deflate-raw/base64url JSON of artists and owned ids); opening it never writes to the viewer's localStorage.
-  - Categories (`state.cat`): **Artists** (sub-tabs = artists) and **EX / Mega EX** (sub-tabs All EX / EX / Mega EX, `state.exSub`). EX cards come from `GET /v2/en/cards?name=*EX` and `?name=*ex` (merged by id), kept if the name ends in ` EX`/`-EX`/` ex` (all eras: 2003–07 ex, 2012–16 EX, 2023+ ex, Mega ex); Mega = name starts with `M ` or `Mega `. Owned flags are shared across categories (same `lang:id` key).
+  - Categories (`state.cat`): **Artists** (sub-tabs = artists) and **EX / Mega EX** (a single sub-tab "EX" with every EX/ex card; `state.exSub` is always "all"). EX cards come from `GET /v2/en/cards?name=*EX` and `?name=*ex` (merged by id), kept if the name ends in ` EX`/`-EX`/` ex` (all eras: 2003–07 ex, 2012–16 EX, 2023+ ex, Mega ex). Owned flags are shared across categories (same `lang:id` key).
 - `collection.html` + `app.js` + `style.css`: older **Collection Tracker** using the Pokémon TCG API (pokemontcg.io).
 
 ## Publishing

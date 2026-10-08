@@ -213,14 +213,14 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const akey = a => a.lang + "|" + a.name;
 // Categories: "artists" (one sub-tab per artist) and "ex" (EX / Mega EX cards, with sub-tabs).
 const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
-const EX_SUBS = [["all", "All EX"], ["ex", "EX"], ["mega", "Mega EX"]];
+const EX_SUBS = [["all", "EX"]]; // one tab with every EX / ex card (Mega included)
 const isMega = name => /^(M|Mega)\s/.test(name);
 // Both eras: "EX" (2012–2016, e.g. "M Charizard EX") and "ex" (2003–2007 and 2023 on, e.g. "Mega Gallade ex").
 // Needs a space or dash before it, so names like "Exeggcute" or "Pokédex" don't count.
 const isEX = name => /[\s-]ex$/i.test(name);
 const lkey = a => a.kind === "ex" ? "cat:ex" : akey(a); // key for loaded card lists
 state.cat = state.cat || "artists";
-state.exSub = state.exSub || "all";
+state.exSub = "all"; // older versions also had "EX" / "Mega EX" tabs
 const ckey = (lang, id) => lang + ":" + id;
 const $ = id => document.getElementById(id);
 
