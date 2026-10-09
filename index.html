@@ -503,7 +503,7 @@ function renderTabs(){
       const [, tip] = all ? pctLabel(ownedCount(EX_LIST, v), cardsOf(EX_LIST, v).length) : ["…", "Loading…"];
       return `<li class="tab ${state.exSub === v ? "on" : ""}"><button data-sub="${v}" title="${tip}"><b>${label}</b></button></li>`;
     }).join("");
-    updateTabArrows();
+    afterTabsDrawn();
     return;
   }
   $("tabs").innerHTML = userLists().map(a => {
@@ -513,7 +513,7 @@ function renderTabs(){
       <button data-open="${esc(k)}" title="${tip}"><b>${esc(a.name)}${langLabel(a.lang)}</b></button>
       <button class="x" data-remove="${esc(k)}" aria-label="Remove ${esc(a.name)}">×</button></li>`;
   }).join("");
-  updateTabArrows();
+  afterTabsDrawn();
 }
 // Tabs show just the name; hovering shows "3 of 16 owned (19%)", and the open tab's details are in the bar below.
 function pctLabel(have, total){
@@ -522,6 +522,24 @@ function pctLabel(have, total){
 }
 
 // « » arrows: show them only when tabs are hidden off that side.
+// Keep the open tab fully in view (clear of the « » arrows). Only when a different tab is opened,
+// so tabs redrawing as prices load don't undo your own scrolling.
+let shownTab = null;
+function afterTabsDrawn(){
+  const key = state.cat + ":" + (state.cat === "ex" ? state.exSub : activeKeyOf());
+  if (key !== shownTab){ shownTab = key; revealActiveTab(); }
+  updateTabArrows();
+}
+function revealActiveTab(){
+  const ul = $("tabs"), li = ul.querySelector(".tab.on"); if (!li) return;
+  const r = li.getBoundingClientRect(), u = ul.getBoundingClientRect(), pad = 44;
+  if (r.right > u.right - pad) ul.scrollLeft += r.right - (u.right - pad);
+  else if (r.left < u.left + pad && ul.scrollLeft > 0) ul.scrollLeft -= (u.left + pad) - r.left;
+  updateTabArrows();
+}
+document.fonts?.ready.then(revealActiveTab);
+addEventListener("resize", revealActiveTab);
+
 function updateTabArrows(){
   const ul = $("tabs"), max = ul.scrollWidth - ul.clientWidth;
   $("tabsLeft").hidden = ul.scrollLeft <= 2;
@@ -655,7 +673,7 @@ $("cats").addEventListener("click", e => {
 });
 
 $("tabs").addEventListener("scroll", updateTabArrows, { passive: true });
-new ResizeObserver(updateTabArrows).observe($("tabs"));
+new ResizeObserver(revealActiveTab).observe($("tabs")); // e.g. the total appearing narrows the tab row
 $("tabsLeft").addEventListener("click", () => $("tabs").scrollBy({ left: -$("tabs").clientWidth * .7, behavior: "smooth" }));
 $("tabsRight").addEventListener("click", () => $("tabs").scrollBy({ left: $("tabs").clientWidth * .7, behavior: "smooth" }));
 
