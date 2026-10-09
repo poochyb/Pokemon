@@ -57,13 +57,16 @@ body.cat-ex .add{display:none}
 .tab.dragging{opacity:.85;outline:2px dashed var(--gold);outline-offset:-2px;cursor:grabbing}
 .tabs.sorting .tab > button{cursor:grabbing}
 .tab{display:flex;align-items:center;border-radius:8px 8px 0 0;background:rgba(255,255,255,.1);white-space:nowrap}
-.tab.on{background:var(--page);color:var(--ink)}
+/* the open tab: gold like the selected category, joined to a gold line on the bar below it */
+.tab.on{background:var(--gold);color:#1C2433;box-shadow:0 -2px 8px rgba(0,0,0,.25)}
+.tab.on b{font-weight:800}
+.tab.on .x{opacity:.8}
 .tab > button{border:0;background:none;padding:.3rem .2rem .3rem .7rem;cursor:pointer;text-align:left}
 .tab b{font-family:var(--display);font-weight:700}
 .tab small{opacity:.7;font-size:.76rem;margin-left:.4rem}
 .tab .x{padding:.3rem .55rem;opacity:.65;font-size:1.1rem;line-height:1}
 
-.toolbar{background:var(--page);color:var(--ink);padding:.45rem var(--gutter);border-bottom:1px solid var(--line);
+.toolbar{background:var(--page);color:var(--ink);padding:.45rem var(--gutter);border-bottom:1px solid var(--line);border-top:3px solid var(--gold);
   display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.25rem}
 .tb-head{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .9rem;flex:1 1 24rem;min-width:0}
 h2{font:800 1.2rem/1.1 var(--display);margin:0;letter-spacing:-.02em}
