@@ -497,22 +497,22 @@ function renderTabs(){
   if (state.cat === "ex"){
     const all = mem.cards[lkey(EX_LIST)];
     $("tabs").innerHTML = EX_SUBS.map(([v, label]) => {
-      const [sub, tip] = all ? pctLabel(ownedCount(EX_LIST, v), cardsOf(EX_LIST, v).length) : ["…", "Loading…"];
-      return `<li class="tab ${state.exSub === v ? "on" : ""}"><button data-sub="${v}" title="${tip}"><b>${label}</b><small>${sub}</small></button></li>`;
+      const [, tip] = all ? pctLabel(ownedCount(EX_LIST, v), cardsOf(EX_LIST, v).length) : ["…", "Loading…"];
+      return `<li class="tab ${state.exSub === v ? "on" : ""}"><button data-sub="${v}" title="${tip}"><b>${label}</b></button></li>`;
     }).join("");
     updateTabArrows();
     return;
   }
   $("tabs").innerHTML = userLists().map(a => {
     const k = lkey(a), have = mem.cards[k] ? ownedCount(a) : null;
-    const [sub, tip] = have === null ? ["…", "Loading…"] : pctLabel(have, mem.cards[k].length);
+    const [, tip] = have === null ? ["…", "Loading…"] : pctLabel(have, mem.cards[k].length);
     return `<li class="tab ${k === activeKeyOf() ? "on" : ""}" data-key="${esc(k)}">
-      <button data-open="${esc(k)}" title="${tip}"><b>${esc(a.name)}${langLabel(a.lang)}</b><small>${sub}</small></button>
+      <button data-open="${esc(k)}" title="${tip}"><b>${esc(a.name)}${langLabel(a.lang)}</b></button>
       <button class="x" data-remove="${esc(k)}" aria-label="Remove ${esc(a.name)}">×</button></li>`;
   }).join("");
   updateTabArrows();
 }
-// Tabs show just the percentage; hovering shows "3 of 16 owned (19%)", and the open tab's details are in the bar below.
+// Tabs show just the name; hovering shows "3 of 16 owned (19%)", and the open tab's details are in the bar below.
 function pctLabel(have, total){
   const pct = total ? Math.round(have / total * 100) : 0;
   return [`${pct}%`, `${have} of ${total} owned (${pct}%)`];
