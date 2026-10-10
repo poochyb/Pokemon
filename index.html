@@ -119,6 +119,15 @@ button.total{border:0;background:none;color:inherit;font:inherit;font-family:var
 button.total:hover{background:rgba(255,255,255,.1)}
 button.total.on{background:var(--gold);color:#1C2433}
 button.total.on strong{color:#1C2433}
+.picker{border:2px solid var(--gold);border-radius:12px;padding:.75rem .9rem 1rem;margin:0 0 1.25rem;background:var(--desk)}
+.picker-head{display:flex;justify-content:space-between;align-items:center;gap:1rem}
+.picker .status{margin:.4rem 0 .8rem}
+.picks{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.picks .sleeve img{opacity:1}
+.picks .btn{margin-top:.4rem;width:100%}
+.which{display:block;font-size:.8rem;margin-top:.35rem;color:var(--muted)}
+.which select{width:100%;margin-top:.15rem;font-size:.85rem;padding:.2rem;border-radius:6px;border:1px solid var(--line);background:var(--page)}
+.meta .remove{border:0;background:none;padding:.2rem 0 0;color:var(--muted);text-decoration:underline;font-size:.78rem;cursor:pointer}
 .meta .rank{display:inline;color:var(--gold);font-family:var(--display);font-weight:800}
 .viewing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem 1rem;
   padding:.4rem var(--gutter);background:var(--gold);color:#1C2433;font-weight:700;font-size:.9rem}
@@ -272,25 +281,19 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const akey = a => a.lang + "|" + a.name;
 // Categories: "artists" (one sub-tab per artist) and "ex" (EX / Mega EX cards, with sub-tabs).
 const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
-// S.I.R. / full art: Pokémon and trainers with full artwork, split into tabs by how TCGdex labels them.
-// (TCGdex gives alternate arts the same rarity as other full arts, e.g. "Ultra Rare" or "Secret Rare".)
-const SIR_SUBS = [
-  { kind: "sir", sub: "sir",  tab: "S.I.R.",            name: "Special Illustration Rares", rarities: ["Special illustration rare"] },
-  { kind: "sir", sub: "ir",   tab: "Illustration Rare", name: "Illustration Rares",         rarities: ["Illustration rare"] },
-  { kind: "sir", sub: "fa",   tab: "Full Art / Ultra",  name: "Full Art & Ultra Rares",     rarities: ["Ultra Rare", "Full Art Trainer", "Shiny Ultra Rare"] },
-  { kind: "sir", sub: "gold", tab: "Secret / Gold",     name: "Secret, Gold & Hyper Rares", rarities: ["Secret Rare", "Hyper rare", "Mega Hyper Rare"] },
-  { kind: "sir", sub: "gal",  tab: "Galleries",         name: "Trainer & Galarian Gallery", gallery: true },
-].map(x => ({ ...x, lang: "en" }));
-const SIR_LIST = SIR_SUBS[0];
-state.sirSub = state.sirSub || "sir";
-const activeSir = () => SIR_SUBS.find(x => x.sub === state.sirSub) || SIR_SUBS[0];
+// Full Arts: cards Howard adds one at a time (any card: full arts, promos, special versions).
+// Each entry keeps the card's basics so it shows even offline, plus the chosen version (vid/vlabel/tp).
+const FA_LIST = { kind: "fa", name: "Full Arts", lang: "en" };
+state.fullArts = state.fullArts || [];
+if (state.cat === "sir") state.cat = "fa"; // the old automatic S.I.R. category became Full Arts
+delete state.sirSub;
 // Most valuable: every owned card from all categories, ranked by price (opened by clicking the binder total).
 const TOP_LIST = { kind: "top", name: "Most valuable cards", lang: "en" };
-const FIXED = { ex: EX_LIST, sir: SIR_LIST, top: TOP_LIST };          // categories with one built-in tab
-const FIXED_TAB = { ex: "EX", sir: "S.I.R.", top: "Most valuable" };
-const FIXED_TITLE = { ex: "EX", sir: "Special Illustration Rares", top: "Most valuable cards" };
+const FIXED = { ex: EX_LIST, fa: FA_LIST, top: TOP_LIST };          // categories with one built-in tab
+const FIXED_TAB = { ex: "EX", fa: "Full Arts", top: "Most valuable" };
+const FIXED_TITLE = { ex: "EX", fa: "Full Arts", top: "Most valuable cards" };
 const isFixedCat = cat => cat in FIXED;
-const fixedList = cat => cat === "sir" ? activeSir() : FIXED[cat];
+const fixedList = cat => FIXED[cat];
 const cardLang = (a, c) => c.lang || a.lang; // cards in "Most valuable" carry their own language
 const EX_SUBS = [["all", "EX"]]; // one tab with every EX / ex card (Mega included)
 const isMega = name => /^(M|Mega)\s/.test(name);
@@ -298,7 +301,7 @@ const isMega = name => /^(M|Mega)\s/.test(name);
 // Needs a space or dash before it, so names like "Exeggcute" or "Pokédex" don't count.
 const isEX = name => /[\s-]ex$/i.test(name);
 const pkey = p => "poke|" + p.lang + "|" + p.name;
-const lkey = a => a.kind === "sir" ? "cat:sir:" + a.sub : a.kind in FIXED ? "cat:" + a.kind : a.kind === "poke" ? pkey(a) : akey(a); // key for loaded card lists
+const lkey = a => a.kind in FIXED ? "cat:" + a.kind : a.kind === "poke" ? pkey(a) : akey(a); // key for loaded card lists
 // Pokémon category: one sub-tab per Pokémon you add (like artists).
 state.pokemon = (state.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
 state.activePoke = state.activePoke || null;
@@ -332,13 +335,13 @@ async function loadNames(lang){
 let pokeNames = null;
 fetch("pokemon-names.json").then(r => r.ok ? r.json() : null).then(d => { pokeNames = d; fillDatalist($("langInput").value); }).catch(() => {});
 function fillDatalist(lang){
-  const names = state.cat === "poke" ? (pokeNames?.[lang] || pokeNames?.en || []) : (mem.names[lang] || []);
+  const names = state.cat === "poke" || state.cat === "fa" ? (pokeNames?.[lang] || pokeNames?.en || []) : (mem.names[lang] || []);
   $("artistList").innerHTML = names.filter(Boolean).map(n => `<option value="${esc(n)}">`).join("");
 }
 function updateAddBox(){
-  const poke = state.cat === "poke";
-  $("artistInput").placeholder = poke ? "Add a Pokémon…" : "Add an artist…";
-  $("artistInput").setAttribute("aria-label", poke ? "Pokémon name" : "Artist name");
+  const poke = state.cat === "poke", fa = state.cat === "fa";
+  $("artistInput").placeholder = fa ? "Add a card…" : poke ? "Add a Pokémon…" : "Add an artist…";
+  $("artistInput").setAttribute("aria-label", fa ? "Card name to search for" : poke ? "Pokémon name" : "Artist name");
   fillDatalist($("langInput").value);
 }
 
@@ -365,7 +368,10 @@ const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toLocaleString("en-US", 
 // TCGdex price first. For English cards TCGdex can't price in dollars, fall back to
 // prices.json: TCGplayer prices downloaded daily by a GitHub Action (scripts/build-prices.mjs).
 function priceOf(a, c){
-  const pr = state.prices[ckey(cardLang(a, c), c.id)];
+  const k = ckey(cardLang(a, c), c.id), fa = faEntry(k);
+  if (fa?.tp && tcgp?.ids?.[fa.tp] != null) return { p: { v: tcgp.ids[fa.tp], c: "USD" }, t: Date.now() }; // exact TCGplayer version
+  if (fa?.vid && state.prices[k]?.v?.[fa.vid]?.c === "USD") return { p: state.prices[k].v[fa.vid], t: state.prices[k].t };
+  const pr = state.prices[k];
   if (!pr || pr.p?.c === "USD" || cardLang(a, c) !== "en") return pr;
   const v = tcgplayerPrice(c, setName(a, c));
   return v != null ? { p: { v, c: "USD" }, t: pr.t } : pr;
@@ -437,7 +443,7 @@ function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, 
 async function loadArtist(a){
   if (!a) return;
   if (a.kind === "ex") return loadEx();
-  if (a.kind === "sir") return loadSir(a);
+  if (a.kind === "fa") return fillDetails(a); // its cards are stored with your data; this just refreshes prices
   if (a.kind === "top") return;
   if (a.kind === "poke") return loadPokemon(a);
   const k = akey(a);
@@ -499,35 +505,6 @@ async function loadPokemon(a){
   } finally { delete mem.loading[k]; render(); }
 }
 
-// Every English special illustration rare, from TCGdex's rarity list (same shape as an artist's list).
-async function loadSir(a){
-  const k = lkey(a);
-  if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
-  mem.loading[k] = true; render();
-  try {
-    const sets = await loadSets("en");
-    let parts;
-    if (a.gallery){ // Trainer Gallery / Galarian Gallery are their own little sets (ids ending in "tg" / "gg")
-      parts = await Promise.all(Object.keys(sets).filter(id => /(tg|gg)$/i.test(id))
-        .map(id => getJSON(`${API}/en/sets/${encodeURIComponent(id)}`).then(d => d.cards || []).catch(() => null)));
-    } else {          // TCGdex keeps a ready-made list per rarity
-      parts = await Promise.all(a.rarities.map(r => getJSON(`${API}/en/rarities/${encodeURIComponent(r)}`)
-        .then(d => d.cards || d).catch(() => getJSON(`${API}/en/cards?rarity=${encodeURIComponent(r)}`)).catch(() => null)));
-    }
-    if (!parts.some(Boolean)) throw new Error("no response");
-    const raw = [...new Map(parts.filter(Boolean).flat().map(c => [c.id, c])).values()];
-    mem.cards[k] = raw.filter(isPhysical).map(c => {
-      const sid = setIdOf(c.id);
-      return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
-               setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
-    });
-    delete mem.errors[k]; remember(k);
-    fillDetails(a, !isShowing(a)); // owned ones right away (for totals); the rest when the tab is opened
-  } catch(e){
-    useSaved(a, k, `Couldn’t load these cards from TCGdex (${e.message}).`);
-  } finally { delete mem.loading[k]; render(); }
-}
-
 // Every card whose name ends in "EX" or "ex" (e.g. "M Charizard EX", "Mega Gallade ex"), English only.
 async function loadEx(){
   const a = EX_LIST, k = lkey(a);
@@ -553,13 +530,45 @@ async function loadEx(){
   } finally { delete mem.loading[k]; render(); }
 }
 
+// Remember a card's rarity, set and prices (overall, and per version for cards with several versions).
+function keepDetails(lang, d, id = d.id){
+  const k = ckey(lang, id), v = {};
+  (d.variants_detailed || []).forEach(x => { const pp = pickPrice(x.pricing); if (x.variantId && pp) v[x.variantId] = pp; });
+  state.details[k] = { r: d.rarity || "", s: d.set?.name || "" };
+  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(Object.keys(v).length ? { v } : {}) };
+}
+
+// ----- Full Arts helpers -----
+let faMemo = { src: null, map: null };
+function faEntry(k){ // the Full Arts entry for a card key, if Howard added that card there
+  if (faMemo.src !== state.fullArts || faMemo.len !== state.fullArts.length){
+    faMemo = { src: state.fullArts, len: state.fullArts.length, map: new Map(state.fullArts.map(e => [ckey(e.lang, e.id), e])) };
+  }
+  return faMemo.map.get(k);
+}
+// Fill in a Full Arts entry's basics from a full card record (used for cards that arrived via a share link).
+function fillEntry(id, lang, d){
+  const e = state.fullArts.find(x => x.id === id && x.lang === lang); if (!e || e.name) return;
+  const ver = e.vid && (d.variants_detailed || []).find(v => v.variantId === e.vid);
+  Object.assign(e, { name: d.name, num: d.localId, image: d.image || "", setId: d.set?.id || setIdOf(id), setName: d.set?.name || "",
+                     ...(ver ? { vlabel: versionLabel(ver) } : {}) });
+  save();
+}
+// A version's label, e.g. "Holo · Pokémon Center stamp".
+function versionLabel(v){
+  const type = { normal: "Regular", holo: "Holo", reverse: "Reverse holo", firstEdition: "1st edition" }[v.type] || (v.type || "Regular");
+  const stamps = (v.stamp || []).map(x => x === "pokemon-center" ? "Pokémon Center stamp"
+    : x.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()) + " stamp");
+  return [type, v.size && v.size !== "standard" ? v.size[0].toUpperCase() + v.size.slice(1) : null, ...stamps].filter(Boolean).join(" · ");
+}
+
 // Fetch rarity, set name and market price a few cards at a time.
 // Rarity/set are kept forever; prices are re-fetched when older than a day.
 async function fillDetails(a, ownedOnly = false){
-  const cards = mem.cards[lkey(a)] || [];
+  const cards = cardsOf(a) || [];
   const now = Date.now();
   const todo = cards.filter(c => {
-    const k = ckey(a.lang, c.id), p = state.prices[k];
+    const k = ckey(cardLang(a, c), c.id), p = state.prices[k];
     if (ownedOnly && !state.owned[k]) return false;
     return !state.details[k] || !p || now - p.t > PRICE_MAX_AGE;
   });
@@ -567,12 +576,13 @@ async function fillDetails(a, ownedOnly = false){
   const worker = async () => {
     while (todo.length){
       const c = todo.shift();
+      const L = cardLang(a, c), k = ckey(L, c.id);
       try {
-        const d = await getJSON(`${API}/${a.lang}/cards/${encodeURIComponent(c.id)}`);
-        state.details[ckey(a.lang, c.id)] = { r: d.rarity || "", s: d.set?.name || "" };
-        state.prices[ckey(a.lang, c.id)] = { p: pickPrice(d.pricing), t: Date.now() };
+        const d = await getJSON(`${API}/${L}/cards/${encodeURIComponent(c.id)}`);
+        keepDetails(L, d, c.id);
+        if (a.kind === "fa") fillEntry(c.id, L, d); // e.g. a card that arrived through a share link
       } catch(e){
-        state.details[ckey(a.lang, c.id)] ||= { r: "", s: "" };
+        state.details[k] ||= { r: "", s: "" };
       }
       if (++n % 12 === 0) { save(); if (isShowing(a)) renderGrid(); else renderTotal(); }
     }
@@ -589,18 +599,19 @@ function isShowing(a){ const cur = activeList(); return !!cur && lkey(cur) === l
 // Cards in a list; for EX, narrowed to the chosen sub-tab (All / EX / Mega EX).
 function cardsOf(a, sub = state.exSub){
   if (a.kind === "top") return ownedEverywhere();
+  if (a.kind === "fa") return state.fullArts.map(e => ({ ...e, num: e.num || "", name: e.name || "Loading…", order: e.order ?? 0 }));
   const cards = mem.cards[lkey(a)];
   if (!cards || a.kind !== "ex" || sub === "all") return cards;
   return cards.filter(c => sub === "mega" ? isMega(c.name) : !isMega(c.name));
 }
 function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => state.owned[ckey(cardLang(a, c), c.id)]).length; }
-function allLists(){ return [...state.artists, ...state.pokemon, EX_LIST, ...SIR_SUBS]; }
+function allLists(){ return [FA_LIST, ...state.artists, ...state.pokemon, EX_LIST]; }
 // Every owned card from every loaded list, each once, tagged with its language.
 function ownedEverywhere(){
   const seen = new Map();
-  allLists().forEach(a => (mem.cards[lkey(a)] || []).forEach(c => {
-    const k = ckey(a.lang, c.id);
-    if (state.owned[k] && !seen.has(k)) seen.set(k, { ...c, lang: a.lang });
+  allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
+    const k = ckey(cardLang(a, c), c.id);
+    if (state.owned[k] && !seen.has(k)) seen.set(k, { ...c, lang: cardLang(a, c) });
   }));
   return [...seen.values()];
 }
@@ -612,24 +623,16 @@ function langLabel(l){ return l === "en" ? "" : " (" + l.toUpperCase() + ")"; }
 function setName(a, c){ return c.setName || state.details[ckey(cardLang(a, c), c.id)]?.s || c.setId; }
 
 function renderCats(){
-  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["sir", "S.I.R."]].map(([v, label]) =>
+  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Full Arts"]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
-  document.body.classList.toggle("cat-fixed", isFixedCat(state.cat));
+  document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top"); // no add box there
   $("total").classList.toggle("on", state.cat === "top");
 }
 
 function renderTabs(){
   renderCats();
   if (drag) return; // don't redraw tabs mid-drag; endDrag redraws them
-  if (state.cat === "sir"){
-    $("tabs").innerHTML = SIR_SUBS.map(a => {
-      const cards = mem.cards[lkey(a)], [, tip] = cards ? pctLabel(ownedCount(a), cards.length) : ["…", "Loading…"];
-      return `<li class="tab ${a.sub === state.sirSub ? "on" : ""}"><button data-sirsub="${a.sub}" title="${a.name}: ${tip}"><b>${a.tab}</b></button></li>`;
-    }).join("");
-    afterTabsDrawn();
-    return;
-  }
-  if (state.cat === "top"){
+  if (state.cat === "top" || state.cat === "fa"){
     const a = FIXED[state.cat], cards = cardsOf(a);
     const [, tip] = cards ? pctLabel(ownedCount(a), cards.length) : ["…", "Loading…"];
     $("tabs").innerHTML = `<li class="tab on"><button title="${a.kind === "top" ? "" : tip}"><b>${FIXED_TAB[state.cat]}</b></button></li>`;
@@ -665,7 +668,7 @@ function pctLabel(have, total){
 // so tabs redrawing as prices load don't undo your own scrolling.
 let shownTab = null;
 function afterTabsDrawn(){
-  const key = state.cat + ":" + (state.cat === "sir" ? state.sirSub : isFixedCat(state.cat) ? state.exSub : activeKeyOf());
+  const key = state.cat + ":" + (isFixedCat(state.cat) ? state.exSub : activeKeyOf());
   if (key !== shownTab){ shownTab = key; revealActiveTab(); }
   updateTabArrows();
 }
@@ -703,7 +706,7 @@ function render(){
   const sets = cards ? [...new Map(cards.map(c => [c.setId, c])).values()].sort((x,y) => x.order - y.order) : [];
   tb.hidden = false;
   tb.innerHTML = `
-    <div class="tb-head"><h2>${esc(a.kind === "sir" ? a.name : FIXED_TITLE[a.kind] || a.name)}</h2><div class="count" id="count"></div><div class="bar" ${top ? "hidden" : ""}><span id="bar"></span></div><div class="count" id="value"></div></div>
+    <div class="tb-head"><h2>${esc(FIXED_TITLE[a.kind] || a.name)}</h2><div class="count" id="count"></div><div class="bar" ${top ? "hidden" : ""}><span id="bar"></span></div><div class="count" id="value"></div></div>
     <div class="filters">
       <div class="seg" role="group" aria-label="Show" ${top ? "hidden" : ""}>
         ${["all","owned","missing"].map(v => `<button data-view="${v}" aria-pressed="${ui.view===v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join("")}
@@ -718,7 +721,8 @@ function render(){
         <option value="value" ${ui.sort==="value"?"selected":""}>Highest value first</option>
       </select>
     </div>`;
-  m.innerHTML = `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
+  m.innerHTML = (a.kind === "fa" ? `<section class="picker" id="picker" hidden></section>` : "") + `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
+  if (a.kind === "fa") renderPicker();
   $("q").addEventListener("input", e => { ui.q = e.target.value; renderGrid(); });
   $("setSel").addEventListener("change", e => { ui.set = e.target.value; renderGrid(); });
   $("sortSel").addEventListener("change", e => { ui.sort = state.sort = e.target.value; save(); renderGrid(); });
@@ -728,9 +732,9 @@ function render(){
 // Value of every owned card across all categories (each card counted once).
 function renderTotal(){
   const seen = new Map();
-  allLists().forEach(a => (mem.cards[lkey(a)] || []).forEach(c => {
+  allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
     const k = ckey(cardLang(a, c), c.id);
-    if (state.owned[k]) seen.set(k, priceOf(a, c));
+    if (state.owned[k] && !seen.has(k)) seen.set(k, priceOf(a, c));
   }));
   $("total").hidden = seen.size === 0;
   $("total").innerHTML = `<span class="lbl">${viewOnly ? "Binder" : "My binder"}: </span><strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} card${seen.size === 1 ? "" : "s"} · top ›</small>`;
@@ -774,6 +778,7 @@ function renderGrid(){
           : (x,y) => x.order - y.order || byNum(x,y));
   st.className = "status";
   st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
+    : cards.length === 0 && a.kind === "fa" ? (viewOnly ? "No full-art cards here yet." : "No cards yet. Type a card’s name in the “Add a card…” box above and click Add, then pick your card from the results. Add the card number to narrow it down, e.g. “Wobbuffet 203”.")
     : cards.length === 0 ? (a.kind in FIXED ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
   const note = a.kind === "top" ? (Object.keys(mem.stale).length ? "TCGdex (the card database) isn’t responding right now, so some cards come from your saved copy." : "") : mem.notes[k];
@@ -791,7 +796,7 @@ function renderGrid(){
       <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
         <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
       ${pic ? `<button class="zoom" data-zoom="${esc(pic.large)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
-      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}</div></li>`;
+      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${c.vlabel ? `<span>${esc(c.vlabel)}</span>` : d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}${a.kind === "fa" && !viewOnly ? `<button class="remove" data-fa-remove="${esc(ckey(cardLang(a, c), c.id))}">Remove from Full Arts</button>` : ""}</div></li>`;
   }).join("");
   renderProgress(a);
 }
@@ -802,12 +807,85 @@ $("addForm").addEventListener("submit", e => {
   e.preventDefault();
   const name = $("artistInput").value.trim(), lang = $("langInput").value;
   if (!name) return;
+  if (state.cat === "fa"){ searchCards(name, lang); $("artistInput").value = ""; return; }
   if (isFixedCat(state.cat)) state.cat = "artists";
   const a = state.cat === "poke" ? { name, lang, kind: "poke" } : { name, lang }, list = userLists();
   if (!list.some(x => lkey(x) === lkey(a))) list.push(a);
   setActiveKey(lkey(a)); ui.set = ""; ui.q = "";
   $("artistInput").value = ""; save(); render(); window.scrollTo(0, 0);
   loadArtist(list.find(x => lkey(x) === lkey(a)));
+});
+
+// ----- Full Arts: find a card and add it -----
+const picker = { q: "", lang: "en", results: null, loading: false, error: "", choosing: null };
+async function searchCards(text, lang){
+  // "Wobbuffet 203" or "Wobbuffet #203" narrows to card number 203.
+  const m = text.match(/^(.*?)[\s#]+(\d+[a-z]?)$/i), name = (m ? m[1] : text).trim(), num = m ? normNum(m[2]) : null;
+  Object.assign(picker, { q: text, lang, results: null, loading: true, error: "", choosing: null }); renderPicker();
+  try {
+    const [sets, raw] = await Promise.all([loadSets(lang),
+      getJSON(`${API}/${lang}/cards?name=${encodeURIComponent(name)}`).catch(e => { if (e.status === 404) return []; throw e; })]);
+    picker.results = raw.filter(c => isPhysical(c) && (!num || normNum(c.localId) === num)).map(c => {
+      const sid = setIdOf(c.id);
+      return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid, setName: sets[sid]?.name || sid, order: sets[sid]?.idx ?? 99999 };
+    }).sort((x, y) => y.order - x.order);
+  } catch(e){ picker.error = `Couldn’t search TCGdex right now (${e.message}). Try again in a minute.`; }
+  picker.loading = false; renderPicker();
+}
+function renderPicker(){
+  const box = $("picker"); if (!box) return;
+  if (!picker.q){ box.hidden = true; return; }
+  box.hidden = false;
+  const MAX = 60, list = picker.results || [];
+  const head = `<div class="picker-head"><strong>Cards named “${esc(picker.q)}”</strong>
+    <button class="btn light-dark" data-picker-close>Done</button></div>`;
+  const status = picker.loading ? "Searching…" : picker.error ? picker.error
+    : !list.length ? "No cards found. Check the spelling, or try just part of the name."
+    : `Click Add on the card you have.${list.length > MAX ? ` Showing the newest ${MAX} of ${list.length}; add the card number to narrow it down (e.g. “${esc(picker.q)} 203”).` : ""}`;
+  box.innerHTML = head + `<p class="status">${status}</p><ul class="grid picks">` + list.slice(0, MAX).map(c => {
+    const pic = cardImages(c, picker.lang), have = faEntry(ckey(picker.lang, c.id)), ch = picker.choosing?.id === c.id ? picker.choosing : null;
+    const action = have ? `<button class="btn light-dark" disabled>Added ✓</button>`
+      : ch?.loading ? `<button class="btn" disabled>…</button>`
+      : ch?.versions ? `<label class="which">Which version?<select data-version-for="${esc(c.id)}">${ch.versions.map((v, i) => `<option value="${i}">${esc(v.label)}</option>`).join("")}</select></label>
+          <button class="btn" data-add-version="${esc(c.id)}">Add this version</button>`
+      : `<button class="btn" data-add-card="${esc(c.id)}">Add</button>`;
+    return `<li class="pocket">${pic ? `<span class="sleeve"><img loading="lazy" src="${esc(pic.small)}" alt="" onerror="noPicture(this)"></span>` : `<span class="sleeve"><span class="noimg">No image yet</span></span>`}
+      <div class="meta"><strong>${esc(c.name)}</strong><span>${esc(c.setName)} #${esc(c.num)}</span>${action}</div></li>`;
+  }).join("") + "</ul>";
+}
+async function startAdd(id){
+  const c = picker.results.find(x => x.id === id); if (!c) return;
+  picker.choosing = { id, loading: true }; renderPicker();
+  let d = null;
+  try { d = await getJSON(`${API}/${picker.lang}/cards/${encodeURIComponent(id)}`); } catch(e){}
+  const versions = (d?.variants_detailed || []).map(v => ({ label: versionLabel(v), vid: v.variantId, tp: v.thirdParty?.tcgplayer }));
+  if (d) keepDetails(picker.lang, d, id);
+  if (versions.length > 1){ picker.choosing = { id, versions, d }; renderPicker(); return; }
+  addFullArt(c, d, versions[0], false);
+}
+function addFullArt(c, d, version, several){
+  const e = { lang: picker.lang, id: c.id, name: d?.name || c.name, num: d?.localId || c.num, image: d?.image || c.image || "",
+              setId: c.setId, setName: d?.set?.name || c.setName, order: c.order, added: Date.now() };
+  if (version?.vid && several){ e.vid = version.vid; e.vlabel = version.label; }
+  if (version?.tp) e.tp = version.tp;
+  state.fullArts.push(e);
+  state.owned[ckey(e.lang, e.id)] = true; // adding a card here means you have it
+  picker.choosing = null; save(); renderPicker(); renderGrid(); renderTabs(); renderTotal();
+}
+function removeFullArt(k){
+  const i = state.fullArts.findIndex(e => ckey(e.lang, e.id) === k); if (i < 0) return;
+  if (!confirm(`Remove ${state.fullArts[i].name} from Full Arts? (It stays marked as owned in your other categories.)`)) return;
+  state.fullArts.splice(i, 1); save(); renderPicker(); render();
+}
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-picker-close]")){ picker.q = ""; renderPicker(); return; }
+  const add = e.target.closest("[data-add-card]"); if (add){ startAdd(add.dataset.addCard); return; }
+  const addV = e.target.closest("[data-add-version]");
+  if (addV){
+    const ch = picker.choosing, i = +document.querySelector(`[data-version-for="${CSS.escape(addV.dataset.addVersion)}"]`).value;
+    addFullArt(picker.results.find(x => x.id === ch.id), ch.d, ch.versions[i], true); return;
+  }
+  const rm = e.target.closest("[data-fa-remove]"); if (rm && !viewOnly){ removeFullArt(rm.dataset.faRemove); }
 });
 
 $("total").addEventListener("click", () => {
@@ -817,11 +895,12 @@ $("total").addEventListener("click", () => {
 
 $("cats").addEventListener("click", e => {
   const b = e.target.closest("[data-cat]"); if (!b || b.dataset.cat === state.cat) return;
+  picker.q = "";
   state.cat = b.dataset.cat; ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
   updateAddBox();
   const cur = activeList();
   loadArtist(cur);
-  if ((cur?.kind === "ex" || cur?.kind === "sir") && mem.cards[lkey(cur)]) fillDetails(cur);
+  if (cur?.kind === "ex" && mem.cards[lkey(cur)]) fillDetails(cur);
 });
 
 $("tabs").addEventListener("scroll", updateTabArrows, { passive: true });
@@ -877,12 +956,6 @@ addEventListener("pointercancel", endDrag);
 $("tabs").addEventListener("click", e => {
   if (suppressClick) return;
   const open = e.target.closest("[data-open]"), rm = e.target.closest("[data-remove]"), sub = e.target.closest("[data-sub]");
-  const sir = e.target.closest("[data-sirsub]");
-  if (sir){
-    state.sirSub = sir.dataset.sirsub; ui.set = ""; ui.q = ""; save(); render();
-    const a = activeSir(); loadArtist(a); if (mem.cards[lkey(a)]) fillDetails(a);
-    return;
-  }
   if (sub){ state.exSub = sub.dataset.sub; ui.set = ""; save(); render(); return; }
   if (rm){
     const k = rm.dataset.remove, list = userLists(), i = list.findIndex(x => lkey(x) === k);
@@ -918,7 +991,7 @@ $("zoomClose").addEventListener("click", () => $("zoomDlg").close());
 $("zoomDlg").addEventListener("click", e => { if (e.target === $("zoomDlg")) $("zoomDlg").close(); });
 
 $("exportBtn").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), owned: state.owned }, null, 1)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, owned: state.owned }, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = `artist-binder-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -932,6 +1005,7 @@ $("importFile").addEventListener("change", async e => {
     state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
     state.pokemon = (d.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
     state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
+    state.fullArts = Array.isArray(d.fullArts) ? d.fullArts : [];
     state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
     save(); render(); allLists().forEach(loadArtist);
   } catch(err){ alert("That file isn’t an Artist Binder backup. Choose a file saved with “Save backup”."); }
@@ -977,16 +1051,16 @@ async function decodeShare(code){
 
 function shareData(){
   // Group owned card ids by language, only for languages of artists in the binder.
-  const langs = new Set([...state.artists.map(a => a.lang), ...state.pokemon.map(p => p.lang), "en"]), owned = {};
+  const langs = new Set([...state.artists.map(a => a.lang), ...state.pokemon.map(p => p.lang), ...state.fullArts.map(e => e.lang), "en"]), owned = {};
   Object.keys(state.owned).forEach(k => {
     const i = k.indexOf(":"), lang = k.slice(0, i);
     if (langs.has(lang)) (owned[lang] ||= []).push(k.slice(i + 1));
   });
-  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), o: owned, c: state.cat };
+  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), o: owned, c: state.cat };
 }
 
 $("shareBtn").addEventListener("click", async () => {
-  if (!state.artists.length && !state.pokemon.length && !Object.keys(state.owned).length){ alert("Mark some cards as owned first, then share."); return; }
+  if (!state.artists.length && !state.pokemon.length && !state.fullArts.length && !Object.keys(state.owned).length){ alert("Mark some cards as owned first, then share."); return; }
   const url = location.origin + location.pathname + "#share=" + await encodeShare(shareData());
   $("shareUrl").value = url;
   $("copyShare").textContent = "Copy link";
@@ -1013,7 +1087,8 @@ async function openShared(code){
   const mine = state; // reuse this browser's cached card details and prices; nothing is saved
   state = { artists: d.a.map(([name, lang]) => ({ name, lang })), owned, details: mine.details, prices: mine.prices, active: null,
             pokemon: (d.p || []).map(([name, lang]) => ({ name, lang, kind: "poke" })),
-            cat: ["ex", "poke", "sir", "top"].includes(d.c) ? d.c : "artists", exSub: "all", sirSub: "sir" };
+            fullArts: (d.f || []).map(([lang, id, vid, tp]) => ({ lang, id, ...(vid ? { vid } : {}), ...(tp ? { tp } : {}) })),
+            cat: d.c === "sir" ? "fa" : ["ex", "poke", "fa", "top"].includes(d.c) ? d.c : "artists", exSub: "all" };
   state.active = state.artists[0] ? akey(state.artists[0]) : null;
   state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
   viewOnly = true; ui.view = "owned";
