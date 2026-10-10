@@ -1,0 +1,33 @@
+name: API probe (developer tool)
+
+# Lets a cloud coding session (which can't reach api.tcgdex.net directly) look at live API
+# responses. Run it from the Actions tab or the API with a list of TCGdex paths; the
+# responses are printed in the job log. It changes nothing in the repository.
+on:
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: "Space-separated TCGdex paths, e.g. /v2/en/rarities /v2/en/cards/base1-4"
+        required: true
+      max_chars:
+        description: "How many characters of each response to print"
+        default: "3000"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch
+        env:
+          PATHS: ${{ inputs.paths }}
+          MAX: ${{ inputs.max_chars }}
+        run: |
+          for p in $PATHS; do
+            case "$p" in /v2/*) ;; *) echo "skipping $p (must start with /v2/)"; continue;; esac
+            echo "===== $p"
+            curl -sS -m 30 -w '\n[HTTP %{http_code}, %{size_download} bytes]\n' "https://api.tcgdex.net$p" -o /tmp/out.txt || true
+            head -c "$MAX" /tmp/out.txt; echo; tail -c 200 /tmp/out.txt | tail -1
+          done
