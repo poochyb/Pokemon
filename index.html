@@ -39,7 +39,7 @@ h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:n
 .cats{display:inline-flex;border-radius:9px;background:rgba(255,255,255,.1);padding:2px}
 .cats button{border:0;background:none;color:var(--cover-ink);padding:.25rem .6rem;border-radius:7px;cursor:pointer;white-space:nowrap;opacity:.8}
 .cats button[aria-pressed="true"]{background:var(--gold);color:#1C2433;font-weight:700;opacity:1}
-body.cat-ex .add{display:none}
+body.cat-fixed .add{display:none}
 .btn{padding:.35rem .85rem;border-radius:8px;border:0;background:var(--gold);color:#1C2433;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn.light{background:rgba(255,255,255,.13);color:var(--cover-ink);font-weight:400}
 
@@ -115,6 +115,11 @@ main::before{content:"";position:absolute;left:calc(var(--gutter) * .45);top:0;b
 .total{font-family:var(--display);white-space:nowrap;margin-left:auto;text-align:right;line-height:1.15}
 .total small{display:block}
 .total strong{color:var(--gold);font-size:1.05rem}
+button.total{border:0;background:none;color:inherit;font:inherit;font-family:var(--display);cursor:pointer;padding:.15rem .45rem;border-radius:8px}
+button.total:hover{background:rgba(255,255,255,.1)}
+button.total.on{background:var(--gold);color:#1C2433}
+button.total.on strong{color:#1C2433}
+.meta .rank{display:inline;color:var(--gold);font-family:var(--display);font-weight:800}
 .viewing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem 1rem;
   padding:.4rem var(--gutter);background:var(--gold);color:#1C2433;font-weight:700;font-size:.9rem}
 .viewing .btn.light{background:rgba(28,36,51,.15);color:#1C2433;text-decoration:none;font-weight:700}
@@ -144,6 +149,7 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 dialog img{width:100%;border-radius:14px;display:block}
 dialog button{margin-top:.75rem;width:100%}
 
+@media (max-width:1400px){ .total .lbl{display:none} }
 @media (max-width:640px){
   h1{font-size:1.1rem}
   .add{flex-basis:100%;order:3}
@@ -178,7 +184,7 @@ dialog button{margin-top:.75rem;width:100%}
       </select>
       <button class="btn" type="submit">Add</button>
     </form>
-    <div class="total" id="total" hidden></div>
+    <button class="total" id="total" title="See your most valuable cards" hidden></button>
   </header>
   <div class="tabrow">
     <div class="tabwrap">
@@ -237,13 +243,33 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const akey = a => a.lang + "|" + a.name;
 // Categories: "artists" (one sub-tab per artist) and "ex" (EX / Mega EX cards, with sub-tabs).
 const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
+// S.I.R. / full art: Pokémon and trainers with full artwork, split into tabs by how TCGdex labels them.
+// (TCGdex gives alternate arts the same rarity as other full arts, e.g. "Ultra Rare" or "Secret Rare".)
+const SIR_SUBS = [
+  { kind: "sir", sub: "sir",  tab: "S.I.R.",            name: "Special Illustration Rares", rarities: ["Special illustration rare"] },
+  { kind: "sir", sub: "ir",   tab: "Illustration Rare", name: "Illustration Rares",         rarities: ["Illustration rare"] },
+  { kind: "sir", sub: "fa",   tab: "Full Art / Ultra",  name: "Full Art & Ultra Rares",     rarities: ["Ultra Rare", "Full Art Trainer", "Shiny Ultra Rare"] },
+  { kind: "sir", sub: "gold", tab: "Secret / Gold",     name: "Secret, Gold & Hyper Rares", rarities: ["Secret Rare", "Hyper rare", "Mega Hyper Rare"] },
+  { kind: "sir", sub: "gal",  tab: "Galleries",         name: "Trainer & Galarian Gallery", gallery: true },
+].map(x => ({ ...x, lang: "en" }));
+const SIR_LIST = SIR_SUBS[0];
+state.sirSub = state.sirSub || "sir";
+const activeSir = () => SIR_SUBS.find(x => x.sub === state.sirSub) || SIR_SUBS[0];
+// Most valuable: every owned card from all categories, ranked by price (opened by clicking the binder total).
+const TOP_LIST = { kind: "top", name: "Most valuable cards", lang: "en" };
+const FIXED = { ex: EX_LIST, sir: SIR_LIST, top: TOP_LIST };          // categories with one built-in tab
+const FIXED_TAB = { ex: "EX", sir: "S.I.R.", top: "Most valuable" };
+const FIXED_TITLE = { ex: "EX", sir: "Special Illustration Rares", top: "Most valuable cards" };
+const isFixedCat = cat => cat in FIXED;
+const fixedList = cat => cat === "sir" ? activeSir() : FIXED[cat];
+const cardLang = (a, c) => c.lang || a.lang; // cards in "Most valuable" carry their own language
 const EX_SUBS = [["all", "EX"]]; // one tab with every EX / ex card (Mega included)
 const isMega = name => /^(M|Mega)\s/.test(name);
 // Both eras: "EX" (2012–2016, e.g. "M Charizard EX") and "ex" (2003–2007 and 2023 on, e.g. "Mega Gallade ex").
 // Needs a space or dash before it, so names like "Exeggcute" or "Pokédex" don't count.
 const isEX = name => /[\s-]ex$/i.test(name);
 const pkey = p => "poke|" + p.lang + "|" + p.name;
-const lkey = a => a.kind === "ex" ? "cat:ex" : a.kind === "poke" ? pkey(a) : akey(a); // key for loaded card lists
+const lkey = a => a.kind === "sir" ? "cat:sir:" + a.sub : a.kind in FIXED ? "cat:" + a.kind : a.kind === "poke" ? pkey(a) : akey(a); // key for loaded card lists
 // Pokémon category: one sub-tab per Pokémon you add (like artists).
 state.pokemon = (state.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
 state.activePoke = state.activePoke || null;
@@ -306,12 +332,12 @@ function pickPrice(pricing){
   }
   return null;
 }
-const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toFixed(2);
+const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // TCGdex price first. For English cards TCGdex can't price in dollars, fall back to
 // prices.json: TCGplayer prices downloaded daily by a GitHub Action (scripts/build-prices.mjs).
 function priceOf(a, c){
-  const pr = state.prices[ckey(a.lang, c.id)];
-  if (!pr || pr.p?.c === "USD" || a.lang !== "en") return pr;
+  const pr = state.prices[ckey(cardLang(a, c), c.id)];
+  if (!pr || pr.p?.c === "USD" || cardLang(a, c) !== "en") return pr;
   const v = tcgplayerPrice(c, setName(a, c));
   return v != null ? { p: { v, c: "USD" }, t: pr.t } : pr;
 }
@@ -361,6 +387,8 @@ function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, 
 async function loadArtist(a){
   if (!a) return;
   if (a.kind === "ex") return loadEx();
+  if (a.kind === "sir") return loadSir(a);
+  if (a.kind === "top") return;
   if (a.kind === "poke") return loadPokemon(a);
   const k = akey(a);
   if (mem.cards[k] || mem.loading[k]) return;
@@ -419,6 +447,34 @@ async function loadPokemon(a){
   } finally { delete mem.loading[k]; render(); }
 }
 
+// Every English special illustration rare, from TCGdex's rarity list (same shape as an artist's list).
+async function loadSir(a){
+  const k = lkey(a);
+  if (mem.cards[k] || mem.loading[k]) return;
+  mem.loading[k] = true; delete mem.errors[k]; render();
+  try {
+    const sets = await loadSets("en");
+    let parts;
+    if (a.gallery){ // Trainer Gallery / Galarian Gallery are their own little sets (ids ending in "tg" / "gg")
+      parts = await Promise.all(Object.keys(sets).filter(id => /(tg|gg)$/i.test(id))
+        .map(id => getJSON(`${API}/en/sets/${encodeURIComponent(id)}`).then(d => d.cards || []).catch(() => null)));
+    } else {          // TCGdex keeps a ready-made list per rarity
+      parts = await Promise.all(a.rarities.map(r => getJSON(`${API}/en/rarities/${encodeURIComponent(r)}`)
+        .then(d => d.cards || d).catch(() => getJSON(`${API}/en/cards?rarity=${encodeURIComponent(r)}`)).catch(() => null)));
+    }
+    if (!parts.some(Boolean)) throw new Error("no response");
+    const raw = [...new Map(parts.filter(Boolean).flat().map(c => [c.id, c])).values()];
+    mem.cards[k] = raw.map(c => {
+      const sid = setIdOf(c.id);
+      return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
+               setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
+    });
+    fillDetails(a, !isShowing(a)); // owned ones right away (for totals); the rest when the tab is opened
+  } catch(e){
+    mem.errors[k] = `Couldn’t load S.I.R. cards from TCGdex (${e.message}). Check your internet connection and reload.`;
+  } finally { delete mem.loading[k]; render(); }
+}
+
 // Every card whose name ends in "EX" or "ex" (e.g. "M Charizard EX", "Mega Gallade ex"), English only.
 async function loadEx(){
   const a = EX_LIST, k = lkey(a);
@@ -474,32 +530,58 @@ async function fillDetails(a, ownedOnly = false){
 function activeArtist(){ return state.artists.find(a => akey(a) === state.active) || null; }
 // The list on screen: the chosen artist, or the EX category.
 function activePoke(){ return state.pokemon.find(p => pkey(p) === state.activePoke) || null; }
-function activeList(){ return state.cat === "ex" ? EX_LIST : state.cat === "poke" ? activePoke() : activeArtist(); }
+function activeList(){ return fixedList(state.cat) || (state.cat === "poke" ? activePoke() : activeArtist()); }
 function isShowing(a){ const cur = activeList(); return !!cur && lkey(cur) === lkey(a); }
 // Cards in a list; for EX, narrowed to the chosen sub-tab (All / EX / Mega EX).
 function cardsOf(a, sub = state.exSub){
+  if (a.kind === "top") return ownedEverywhere();
   const cards = mem.cards[lkey(a)];
   if (!cards || a.kind !== "ex" || sub === "all") return cards;
   return cards.filter(c => sub === "mega" ? isMega(c.name) : !isMega(c.name));
 }
-function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => state.owned[ckey(a.lang, c.id)]).length; }
-function allLists(){ return [...state.artists, ...state.pokemon, EX_LIST]; }
+function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => state.owned[ckey(cardLang(a, c), c.id)]).length; }
+function allLists(){ return [...state.artists, ...state.pokemon, EX_LIST, ...SIR_SUBS]; }
+// Every owned card from every loaded list, each once, tagged with its language.
+function ownedEverywhere(){
+  const seen = new Map();
+  allLists().forEach(a => (mem.cards[lkey(a)] || []).forEach(c => {
+    const k = ckey(a.lang, c.id);
+    if (state.owned[k] && !seen.has(k)) seen.set(k, { ...c, lang: a.lang });
+  }));
+  return [...seen.values()];
+}
 // The add-able lists (artists or Pokémon) for the current category, and which one is open.
 const userLists = () => state.cat === "poke" ? state.pokemon : state.artists;
 const activeKeyOf = () => state.cat === "poke" ? state.activePoke : state.active;
 function setActiveKey(k){ if (state.cat === "poke") state.activePoke = k; else state.active = k; }
 function langLabel(l){ return l === "en" ? "" : " (" + l.toUpperCase() + ")"; }
-function setName(a, c){ return c.setName || state.details[ckey(a.lang, c.id)]?.s || c.setId; }
+function setName(a, c){ return c.setName || state.details[ckey(cardLang(a, c), c.id)]?.s || c.setId; }
 
 function renderCats(){
-  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"]].map(([v, label]) =>
+  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["sir", "S.I.R."]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
-  document.body.classList.toggle("cat-ex", state.cat === "ex");
+  document.body.classList.toggle("cat-fixed", isFixedCat(state.cat));
+  $("total").classList.toggle("on", state.cat === "top");
 }
 
 function renderTabs(){
   renderCats();
   if (drag) return; // don't redraw tabs mid-drag; endDrag redraws them
+  if (state.cat === "sir"){
+    $("tabs").innerHTML = SIR_SUBS.map(a => {
+      const cards = mem.cards[lkey(a)], [, tip] = cards ? pctLabel(ownedCount(a), cards.length) : ["…", "Loading…"];
+      return `<li class="tab ${a.sub === state.sirSub ? "on" : ""}"><button data-sirsub="${a.sub}" title="${a.name}: ${tip}"><b>${a.tab}</b></button></li>`;
+    }).join("");
+    afterTabsDrawn();
+    return;
+  }
+  if (state.cat === "top"){
+    const a = FIXED[state.cat], cards = cardsOf(a);
+    const [, tip] = cards ? pctLabel(ownedCount(a), cards.length) : ["…", "Loading…"];
+    $("tabs").innerHTML = `<li class="tab on"><button title="${a.kind === "top" ? "" : tip}"><b>${FIXED_TAB[state.cat]}</b></button></li>`;
+    afterTabsDrawn();
+    return;
+  }
   if (state.cat === "ex"){
     const all = mem.cards[lkey(EX_LIST)];
     $("tabs").innerHTML = EX_SUBS.map(([v, label]) => {
@@ -529,7 +611,7 @@ function pctLabel(have, total){
 // so tabs redrawing as prices load don't undo your own scrolling.
 let shownTab = null;
 function afterTabsDrawn(){
-  const key = state.cat + ":" + (state.cat === "ex" ? state.exSub : activeKeyOf());
+  const key = state.cat + ":" + (state.cat === "sir" ? state.sirSub : isFixedCat(state.cat) ? state.exSub : activeKeyOf());
   if (key !== shownTab){ shownTab = key; revealActiveTab(); }
   updateTabArrows();
 }
@@ -563,19 +645,19 @@ function render(){
       <p>Many artists have cards that were only released in Japan. If someone’s list looks short, add them again with Japanese selected.</p></div>`;
     return;
   }
-  const cards = cardsOf(a);
+  const cards = cardsOf(a), top = a.kind === "top";
   const sets = cards ? [...new Map(cards.map(c => [c.setId, c])).values()].sort((x,y) => x.order - y.order) : [];
   tb.hidden = false;
   tb.innerHTML = `
-    <div class="tb-head"><h2>${esc(a.kind === "ex" ? EX_SUBS.find(x => x[0] === state.exSub)[1] : a.name)}</h2><div class="count" id="count"></div><div class="bar"><span id="bar"></span></div><div class="count" id="value"></div></div>
+    <div class="tb-head"><h2>${esc(a.kind === "sir" ? a.name : FIXED_TITLE[a.kind] || a.name)}</h2><div class="count" id="count"></div><div class="bar" ${top ? "hidden" : ""}><span id="bar"></span></div><div class="count" id="value"></div></div>
     <div class="filters">
-      <div class="seg" role="group" aria-label="Show">
+      <div class="seg" role="group" aria-label="Show" ${top ? "hidden" : ""}>
         ${["all","owned","missing"].map(v => `<button data-view="${v}" aria-pressed="${ui.view===v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join("")}
       </div>
       <input id="q" type="search" placeholder="Find a Pokémon" value="${esc(ui.q)}" aria-label="Find a Pokémon">
       <select id="setSel" aria-label="Set"><option value="">All sets</option>
         ${sets.map(c => `<option value="${esc(c.setId)}" ${ui.set===c.setId?"selected":""}>${esc(setName(a,c))}</option>`).join("")}</select>
-      <select id="sortSel" aria-label="Sort">
+      <select id="sortSel" aria-label="Sort" ${top ? "hidden" : ""}>
         <option value="name" ${ui.sort==="name"?"selected":""}>Pokémon A–Z</option>
         <option value="old" ${ui.sort==="old"?"selected":""}>Oldest sets first</option>
         <option value="new" ${ui.sort==="new"?"selected":""}>Newest sets first</option>
@@ -593,19 +675,20 @@ function render(){
 function renderTotal(){
   const seen = new Map();
   allLists().forEach(a => (mem.cards[lkey(a)] || []).forEach(c => {
-    const k = ckey(a.lang, c.id);
+    const k = ckey(cardLang(a, c), c.id);
     if (state.owned[k]) seen.set(k, priceOf(a, c));
   }));
   $("total").hidden = seen.size === 0;
-  $("total").innerHTML = `<span class="lbl">${viewOnly ? "Binder" : "My binder"}: </span><strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} owned card${seen.size === 1 ? "" : "s"}</small>`;
+  $("total").innerHTML = `<span class="lbl">${viewOnly ? "Binder" : "My binder"}: </span><strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} card${seen.size === 1 ? "" : "s"} · top ›</small>`;
 }
 
 function renderProgress(a){
   const cards = cardsOf(a) || [], have = ownedCount(a);
   const pct = cards.length ? Math.round(have / cards.length * 100) : 0;
-  if ($("count")) $("count").innerHTML = `<strong>${have}</strong> of ${cards.length} owned (${pct}%)`;
+  if ($("count")) $("count").innerHTML = a.kind === "top" ? `<strong>${have}</strong> owned card${have === 1 ? "" : "s"}, highest value first`
+    : `<strong>${have}</strong> of ${cards.length} owned (${pct}%)`;
   if ($("value")){
-    const owned = cards.filter(c => state.owned[ckey(a.lang, c.id)]);
+    const owned = cards.filter(c => state.owned[ckey(cardLang(a, c), c.id)]);
     const pending = owned.filter(c => !priceOf(a, c)).length;
     $("value").innerHTML = `Owned value <strong>${sumValue(owned.map(c => priceOf(a, c)))}</strong>`
       + (pending ? ` <small>(${pending} still loading)</small>` : "");
@@ -622,7 +705,8 @@ function renderGrid(){
   if (!cards) { st.textContent = "Loading cards from TCGdex…"; st.className = "status"; $("grid").innerHTML = ""; return; }
   const q = ui.q.trim().toLowerCase();
   let list = cards.filter(c => {
-    const own = !!state.owned[ckey(a.lang, c.id)];
+    const own = !!state.owned[ckey(cardLang(a, c), c.id)];
+    if (a.kind === "top") return own && (!ui.set || c.setId === ui.set) && (!q || c.name.toLowerCase().includes(q));
     if (ui.view === "owned" && !own) return false;
     if (ui.view === "missing" && own) return false;
     if (ui.set && c.setId !== ui.set) return false;
@@ -630,25 +714,27 @@ function renderGrid(){
   });
   const byNum = (x,y) => String(x.num).localeCompare(String(y.num), undefined, {numeric:true});
   const val = c => priceOf(a, c)?.p?.v ?? -1;
-  list.sort(ui.sort === "value" ? (x,y) => val(y) - val(x) || x.name.localeCompare(y.name)
+  list.sort(ui.sort === "value" || a.kind === "top" ? (x,y) => val(y) - val(x) || x.name.localeCompare(y.name)
           : ui.sort === "name" ? (x,y) => x.name.localeCompare(y.name) || x.order - y.order || byNum(x,y)
           : ui.sort === "new" ? (x,y) => y.order - x.order || byNum(x,y)
           : (x,y) => x.order - y.order || byNum(x,y));
   st.className = "status";
-  st.textContent = cards.length === 0 ? (a.kind === "ex" ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
+  st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
+    : cards.length === 0 ? (a.kind in FIXED ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
-  $("grid").innerHTML = list.map(c => {
-    const own = !!state.owned[ckey(a.lang, c.id)], d = state.details[ckey(a.lang, c.id)] || {};
+  $("grid").innerHTML = list.map((c, i) => {
+    const own = !!state.owned[ckey(cardLang(a, c), c.id)], d = state.details[ckey(cardLang(a, c), c.id)] || {};
     const sn = setName(a, c), pr = priceOf(a, c);
     const priceTxt = !pr ? `<span class="price muted">Price loading…</span>`
       : pr.p ? `<span class="price">${money(pr.p.v, pr.p.c)}</span>` : `<span class="price muted">No price data</span>`;
     const img = c.image ? `<img loading="lazy" src="${esc(c.image)}/low.webp" alt="${esc(c.name)}, ${esc(sn)}">`
                         : `<span class="noimg">No image yet<br>${esc(c.name)}</span>`;
-    return `<li class="pocket ${own?"owned":""}" data-id="${esc(c.id)}">
+    const rank = a.kind === "top" ? `<span class="rank">#${i + 1}</span> ` : "";
+    return `<li class="pocket ${own?"owned":""}" data-id="${esc(c.id)}" data-lang="${esc(cardLang(a, c))}">
       <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
         <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
       ${c.image ? `<button class="zoom" data-zoom="${esc(c.image)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
-      <div class="meta"><strong>${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}</div></li>`;
+      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}</div></li>`;
   }).join("");
   renderProgress(a);
 }
@@ -659,7 +745,7 @@ $("addForm").addEventListener("submit", e => {
   e.preventDefault();
   const name = $("artistInput").value.trim(), lang = $("langInput").value;
   if (!name) return;
-  if (state.cat === "ex") state.cat = "artists";
+  if (isFixedCat(state.cat)) state.cat = "artists";
   const a = state.cat === "poke" ? { name, lang, kind: "poke" } : { name, lang }, list = userLists();
   if (!list.some(x => lkey(x) === lkey(a))) list.push(a);
   setActiveKey(lkey(a)); ui.set = ""; ui.q = "";
@@ -667,12 +753,18 @@ $("addForm").addEventListener("submit", e => {
   loadArtist(list.find(x => lkey(x) === lkey(a)));
 });
 
+$("total").addEventListener("click", () => {
+  if (state.cat === "top") return;
+  state.cat = "top"; ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
+});
+
 $("cats").addEventListener("click", e => {
   const b = e.target.closest("[data-cat]"); if (!b || b.dataset.cat === state.cat) return;
   state.cat = b.dataset.cat; ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
   updateAddBox();
-  if (state.cat === "ex"){ loadEx(); if (mem.cards[lkey(EX_LIST)]) fillDetails(EX_LIST); }
-  else loadArtist(activeList());
+  const cur = activeList();
+  loadArtist(cur);
+  if ((cur?.kind === "ex" || cur?.kind === "sir") && mem.cards[lkey(cur)]) fillDetails(cur);
 });
 
 $("tabs").addEventListener("scroll", updateTabArrows, { passive: true });
@@ -683,7 +775,7 @@ $("tabsRight").addEventListener("click", () => $("tabs").scrollBy({ left: $("tab
 // Drag tabs to reorder artists / Pokémon. Mouse: press and drag. Touch: press and hold for a moment, then drag.
 let drag = null, suppressClick = false;
 $("tabs").addEventListener("pointerdown", e => {
-  if (viewOnly || state.cat === "ex" || e.button > 0) return;
+  if (viewOnly || isFixedCat(state.cat) || e.button > 0) return;
   const li = e.target.closest(".tab[data-key]"); if (!li || e.target.closest(".x")) return;
   drag = { li, id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false, touch: e.pointerType !== "mouse" };
   if (drag.touch) drag.timer = setTimeout(startDrag, 350);
@@ -728,6 +820,12 @@ addEventListener("pointercancel", endDrag);
 $("tabs").addEventListener("click", e => {
   if (suppressClick) return;
   const open = e.target.closest("[data-open]"), rm = e.target.closest("[data-remove]"), sub = e.target.closest("[data-sub]");
+  const sir = e.target.closest("[data-sirsub]");
+  if (sir){
+    state.sirSub = sir.dataset.sirsub; ui.set = ""; ui.q = ""; save(); render();
+    const a = activeSir(); loadArtist(a); if (mem.cards[lkey(a)]) fillDetails(a);
+    return;
+  }
   if (sub){ state.exSub = sub.dataset.sub; ui.set = ""; save(); render(); return; }
   if (rm){
     const k = rm.dataset.remove, list = userLists(), i = list.findIndex(x => lkey(x) === k);
@@ -748,13 +846,13 @@ function onPageClick(e){
   if (z){ $("zoomImg").src = z.dataset.zoom + "/high.webp"; $("zoomDlg").showModal(); return; }
   const t = e.target.closest(".toggle");
   if (t && !viewOnly){
-    const a = activeList(), li = t.closest(".pocket"), k = ckey(a.lang, li.dataset.id);
+    const a = activeList(), li = t.closest(".pocket"), k = ckey(li.dataset.lang || a.lang, li.dataset.id);
     if (state.owned[k]) delete state.owned[k]; else state.owned[k] = true;
     const own = !!state.owned[k];
     li.classList.toggle("owned", own); t.setAttribute("aria-pressed", own);
     li.querySelector(".tag").textContent = own ? "Owned" : "Missing";
     save(); renderProgress(a);
-    if (ui.view !== "all") setTimeout(renderGrid, 250);
+    if (ui.view !== "all" || a.kind === "top") setTimeout(renderGrid, 250);
   }
 }
 $("main").addEventListener("click", onPageClick);
@@ -858,7 +956,7 @@ async function openShared(code){
   const mine = state; // reuse this browser's cached card details and prices; nothing is saved
   state = { artists: d.a.map(([name, lang]) => ({ name, lang })), owned, details: mine.details, prices: mine.prices, active: null,
             pokemon: (d.p || []).map(([name, lang]) => ({ name, lang, kind: "poke" })),
-            cat: ["ex", "poke"].includes(d.c) ? d.c : "artists", exSub: "all" };
+            cat: ["ex", "poke", "sir", "top"].includes(d.c) ? d.c : "artists", exSub: "all", sirSub: "sir" };
   state.active = state.artists[0] ? akey(state.artists[0]) : null;
   state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
   viewOnly = true; ui.view = "owned";
