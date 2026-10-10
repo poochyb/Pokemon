@@ -44,6 +44,7 @@ console.log(`${groups.length} groups`);
 
 const sets = [];
 const cards = {};
+const ids = {}; // TCGplayer productId → price, for exact versions (e.g. a Pokémon Center stamped promo)
 let count = 0, i = 0;
 
 async function worker() {
@@ -62,6 +63,7 @@ async function worker() {
       const price = bestPrice(byProduct[prod.productId] || []);
       if (price == null) continue;
       (cards[normNum(num)] ||= []).push([setIdx, normName(prod.name), price]);
+      ids[prod.productId] = price;
       count++;
     }
   }
@@ -69,5 +71,5 @@ async function worker() {
 await Promise.all([worker(), worker(), worker(), worker()]);
 
 if (count < 1000) throw new Error(`Only ${count} priced cards found; refusing to overwrite prices.json`);
-await writeFile("prices.json", JSON.stringify({ updated: new Date().toISOString(), sets, cards }));
+await writeFile("prices.json", JSON.stringify({ updated: new Date().toISOString(), sets, cards, ids }));
 console.log(`Wrote prices.json with ${count} priced cards from ${sets.length} sets`);
