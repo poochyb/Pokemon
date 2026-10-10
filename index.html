@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Howard’s Pokémon TCG Collection</title>
+<title>PYB’s Pokémon TCG Collection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -182,7 +182,7 @@ dialog button{margin-top:.75rem;width:100%}
     <a class="btn light" href="./" id="ownBinder">Open my own binder</a>
   </div>
   <header>
-    <h1>Howard’s Pokémon TCG Collection</h1>
+    <h1>PYB’s Pokémon TCG Collection</h1>
     <nav class="cats" id="cats" aria-label="Category"></nav>
     <form class="add" id="addForm">
       <input id="artistInput" list="artistList" placeholder="Add an artist…" autocomplete="off" aria-label="Artist name">
@@ -283,7 +283,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const akey = a => a.lang + "|" + a.name;
 // Categories: "artists" (one sub-tab per artist) and "ex" (EX / Mega EX cards, with sub-tabs).
 const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
-// Full Arts: cards Howard adds one at a time (any card: full arts, promos, special versions).
+// Full Arts: cards the owner adds one at a time (any card: full arts, promos, special versions).
 // Each entry keeps the card's basics so it shows even offline, plus the chosen version (vid/vlabel/tp).
 const FA_LIST = { kind: "fa", name: "Full Arts", lang: "en" };
 state.fullArts = state.fullArts || [];
@@ -542,7 +542,7 @@ function keepDetails(lang, d, id = d.id){
 
 // ----- Full Arts helpers -----
 let faMemo = { src: null, map: null };
-function faEntry(k){ // the Full Arts entry for a card key, if Howard added that card there
+function faEntry(k){ // the Full Arts entry for a card key, if the owner added that card there
   if (faMemo.src !== state.fullArts || faMemo.len !== state.fullArts.length){
     faMemo = { src: state.fullArts, len: state.fullArts.length, map: new Map(state.fullArts.map(e => [ckey(e.lang, e.id), e])) };
   }
@@ -1077,7 +1077,7 @@ $("copyShare").addEventListener("click", async () => {
   $("copyShare").textContent = "Copied!";
 });
 $("nativeShare").addEventListener("click", () => {
-  navigator.share({ title: "Howard’s Pokémon TCG Collection", url: $("shareUrl").value }).catch(() => {});
+  navigator.share({ title: "PYB’s Pokémon TCG Collection", url: $("shareUrl").value }).catch(() => {});
 });
 $("closeShare").addEventListener("click", () => $("shareDlg").close());
 addEventListener("hashchange", () => location.reload());
@@ -1098,7 +1098,7 @@ async function openShared(code){
   document.body.classList.add("view-only");
   $("viewing").hidden = false;
   if (d.d) $("viewingDate").textContent = " (as of " + new Date(d.d + "T12:00").toLocaleDateString() + ")";
-  document.title = "Howard’s Pokémon TCG Collection (shared)";
+  document.title = "PYB’s Pokémon TCG Collection (shared)";
 }
 
 // Start
