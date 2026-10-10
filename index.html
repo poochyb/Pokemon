@@ -382,6 +382,23 @@ function sumValue(entries){
   return parts.join(" + ");
 }
 
+// Card pictures: TCGdex's own, or for English cards it has no picture for (e.g. Trainer Gallery and
+// Galarian Gallery), the Pokémon TCG API's image library, e.g. images.pokemontcg.io/swsh12pt5gg/GG44.png.
+function cardImages(c, lang){
+  if (c.image) return { small: c.image + "/low.webp", large: c.image + "/high.webp" };
+  if (lang !== "en" || !c.setId || !c.num) return null;
+  const set = c.setId.replace(/\./g, "pt").replace(/^(sv|me)0(\d)/, "$1$2"); // "swsh12.5gg" → "swsh12pt5gg", "sv03.5" → "sv3pt5"
+  const num = /^\d+$/.test(c.num) ? String(+c.num) : c.num;                     // "090" → "90"; "TG01" stays
+  const base = `https://images.pokemontcg.io/${encodeURIComponent(set)}/${encodeURIComponent(num)}`;
+  return { small: base + ".png", large: base + "_hires.png" };
+}
+// If a picture can't be loaded, show the "No image yet" box instead of a broken image.
+function noPicture(img){
+  const li = img.closest(".pocket");
+  img.replaceWith(Object.assign(document.createElement("span"), { className: "noimg", textContent: "No image yet" }));
+  li?.querySelector(".zoom")?.remove();
+}
+
 function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, i) : id; }
 
 async function loadArtist(a){
@@ -727,13 +744,14 @@ function renderGrid(){
     const sn = setName(a, c), pr = priceOf(a, c);
     const priceTxt = !pr ? `<span class="price muted">Price loading…</span>`
       : pr.p ? `<span class="price">${money(pr.p.v, pr.p.c)}</span>` : `<span class="price muted">No price data</span>`;
-    const img = c.image ? `<img loading="lazy" src="${esc(c.image)}/low.webp" alt="${esc(c.name)}, ${esc(sn)}">`
+    const pic = cardImages(c, cardLang(a, c));
+    const img = pic ? `<img loading="lazy" src="${esc(pic.small)}" alt="${esc(c.name)}, ${esc(sn)}" onerror="noPicture(this)">`
                         : `<span class="noimg">No image yet<br>${esc(c.name)}</span>`;
     const rank = a.kind === "top" ? `<span class="rank">#${i + 1}</span> ` : "";
     return `<li class="pocket ${own?"owned":""}" data-id="${esc(c.id)}" data-lang="${esc(cardLang(a, c))}">
       <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
         <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
-      ${c.image ? `<button class="zoom" data-zoom="${esc(c.image)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
+      ${pic ? `<button class="zoom" data-zoom="${esc(pic.large)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
       <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}</div></li>`;
   }).join("");
   renderProgress(a);
@@ -843,7 +861,7 @@ function onPageClick(e){
   const v = e.target.closest("[data-view]");
   if (v){ ui.view = v.dataset.view; document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b === v)); renderGrid(); return; }
   const z = e.target.closest("[data-zoom]");
-  if (z){ $("zoomImg").src = z.dataset.zoom + "/high.webp"; $("zoomDlg").showModal(); return; }
+  if (z){ $("zoomImg").src = z.dataset.zoom; $("zoomDlg").showModal(); return; }
   const t = e.target.closest(".toggle");
   if (t && !viewOnly){
     const a = activeList(), li = t.closest(".pocket"), k = ckey(li.dataset.lang || a.lang, li.dataset.id);

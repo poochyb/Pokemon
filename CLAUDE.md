@@ -10,6 +10,8 @@ The owner is new to coding. Explain things in plain language and give click-by-c
   - Sub-tabs show only the name (title tooltip has "x of y owned (N%)"; the open tab's numbers are in the toolbar); artist/Pokémon tabs can be reordered by dragging (pointer events; touch needs a 350 ms press-and-hold so swipes still scroll). The order is the array order in `state.artists` / `state.pokemon`. « » arrows appear when the tab strip overflows.
 - `collection.html` + `app.js` + `style.css`: older **Collection Tracker** using the Pokémon TCG API (pokemontcg.io).
 
+- Card pictures: TCGdex `image` + `/low.webp` / `/high.webp`. TCGdex has no images for some cards (e.g. all Trainer/Galarian Gallery cards); for English ones `cardImages()` falls back to `https://images.pokemontcg.io/<set>/<num>.png` (`_hires.png` for zoom), mapping TCGdex set ids (`swsh12.5gg` → `swsh12pt5gg`, `sv03.5` → `sv3pt5`) and stripping leading zeros from numeric card numbers. Failed images show the "No image yet" box.
+
 ## Publishing
 - Live site via GitHub Pages: https://poochyb.github.io/Pokemon/ (Artist Binder) and /collection.html.
 - Pages serves the branch `claude/pokemon-tcg-collection-ws1czw` (also the repo's default branch). Changes only go live once they are on that branch.
