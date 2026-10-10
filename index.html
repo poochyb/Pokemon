@@ -40,6 +40,8 @@ h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:n
 .cats button{border:0;background:none;color:var(--cover-ink);padding:.25rem .6rem;border-radius:7px;cursor:pointer;white-space:nowrap;opacity:.8}
 .cats button[aria-pressed="true"]{background:var(--gold);color:#1C2433;font-weight:700;opacity:1}
 body.cat-fixed .add{display:none}
+body.no-tabs .tabrow{display:none}
+body.no-tabs header{padding-bottom:.5rem}
 .btn{padding:.35rem .85rem;border-radius:8px;border:0;background:var(--gold);color:#1C2433;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn.light{background:rgba(255,255,255,.13);color:var(--cover-ink);font-weight:400}
 
@@ -626,6 +628,7 @@ function renderCats(){
   $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Full Arts"]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
   document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top"); // no add box there
+  document.body.classList.toggle("no-tabs", isFixedCat(state.cat)); // EX, Full Arts, Most valuable: no sub-tabs to show
   $("total").classList.toggle("on", state.cat === "top");
 }
 
