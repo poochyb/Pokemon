@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       paths:
-        description: "Space-separated TCGdex paths, e.g. /v2/en/rarities /v2/en/cards/base1-4"
+        description: "Space-separated TCGdex paths (e.g. /v2/en/rarities) or full https:// URLs"
         required: true
       max_chars:
         description: "How many characters of each response to print"
@@ -27,8 +27,9 @@ jobs:
         run: |
           set -f  # keep * and ? in paths literal
           for p in $PATHS; do
-            case "$p" in /v2/*) ;; *) echo "skipping $p (must start with /v2/)"; continue;; esac
-            echo "===== $p"
-            curl -sS -m 30 -w '\n[HTTP %{http_code}, %{size_download} bytes]\n' "https://api.tcgdex.net$p" -o /tmp/out.txt || true
+            case "$p" in /v2/*) url="https://api.tcgdex.net$p";; https://*) url="$p";; *) echo "skipping $p"; continue;; esac
+            echo "===== $url"
+            curl -sS -m 30 -w '\n[HTTP %{http_code}, %{size_download} bytes, %{content_type}]\n' "$url" -o /tmp/out.txt || true
+            case "$(file -b --mime-type /tmp/out.txt)" in image/*) echo "(image file)"; continue;; esac
             head -c "$MAX" /tmp/out.txt; echo; tail -c 200 /tmp/out.txt | tail -1
           done
