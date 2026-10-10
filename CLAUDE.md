@@ -12,6 +12,9 @@ The owner is new to coding. Explain things in plain language and give click-by-c
 
 - Card pictures: TCGdex `image` + `/low.webp` / `/high.webp`. TCGdex has no images for some cards (e.g. all Trainer/Galarian Gallery cards); for English ones `cardImages()` falls back to `https://images.pokemontcg.io/<set>/<num>.png` (`_hires.png` for zoom), mapping TCGdex set ids (`swsh12.5gg` → `swsh12pt5gg`, `sv03.5` → `sv3pt5`) and stripping leading zeros from numeric card numbers. Failed images show the "No image yet" box.
 
+- Card lists are cached in localStorage (`artistBinder.lists.v1`, separate from user data). If TCGdex fails (it has short outages, e.g. HTTP 503 "no available server"), `useSaved()` shows the saved copy with a note and retries every minute; never-loaded lists show an error and keep retrying.
+- TCGdex also returns Pokémon TCG Pocket (phone game) cards (`/tcgp/` images, set ids like `A4`, `B2`, `P-A`); `isPhysical()` drops them from every list.
+
 ## Publishing
 - Live site via GitHub Pages: https://poochyb.github.io/Pokemon/ (Artist Binder) and /collection.html.
 - Pages serves the branch `claude/pokemon-tcg-collection-ws1czw` (also the repo's default branch). Changes only go live once they are on that branch.

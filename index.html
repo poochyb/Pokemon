@@ -233,7 +233,36 @@ state.details = state.details || {};
 state.prices = state.prices || {};
 const PRICE_MAX_AGE = 24 * 60 * 60 * 1000; // refresh prices once a day
 const ui = { view: "all", q: "", set: "", sort: state.sort || "name" };
-const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {} };
+const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {}, stale: {}, notes: {}, retry: {} };
+
+// Saved copies of every card list, so cards don't vanish if TCGdex is down (kept apart from your checkmarks).
+const LIST_KEY = "artistBinder.lists.v1";
+const listCache = (() => { try { return JSON.parse(localStorage.getItem(LIST_KEY)) || {}; } catch(e){ return {}; } })();
+let listSaveTimer;
+function remember(k){
+  delete mem.stale[k]; delete mem.notes[k];
+  if (viewOnly || !mem.cards[k]?.length) return;
+  listCache[k] = { t: Date.now(), cards: mem.cards[k] };
+  clearTimeout(listSaveTimer);
+  listSaveTimer = setTimeout(() => {
+    try { localStorage.setItem(LIST_KEY, JSON.stringify(listCache)); }
+    catch(e){ // browser storage full: keep the most recently refreshed half and try again
+      Object.entries(listCache).sort((x, y) => x[1].t - y[1].t).slice(0, Math.ceil(Object.keys(listCache).length / 2)).forEach(([key]) => delete listCache[key]);
+      try { localStorage.setItem(LIST_KEY, JSON.stringify(listCache)); } catch(e2){}
+    }
+  }, 500);
+}
+// TCGdex didn't answer: show the saved copy if there is one, and try again in a minute.
+function useSaved(a, k, msg){
+  const saved = listCache[k];
+  if (saved?.cards?.length && (!mem.cards[k] || mem.stale[k])){
+    mem.cards[k] = saved.cards; mem.stale[k] = true; delete mem.errors[k];
+    mem.notes[k] = `TCGdex (the card database) isn’t responding right now, so this is your saved copy from ${new Date(saved.t).toLocaleDateString()}. It will refresh by itself once TCGdex is back.`;
+  } else if (!mem.cards[k]){
+    mem.errors[k] = msg + " The app will keep trying every minute.";
+  }
+  if (!mem.retry[k]) mem.retry[k] = setTimeout(() => { delete mem.retry[k]; loadArtist(a); }, 60000);
+}
 
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
 let saveTimer;
@@ -399,6 +428,10 @@ function noPicture(img){
   li?.querySelector(".zoom")?.remove();
 }
 
+// TCGdex also lists the phone game Pokémon TCG Pocket (sets "A1", "A4", "B2", "P-A", pictures under /tcgp/).
+// Those aren't physical cards, so they're left out everywhere.
+const isPhysical = c => !/\/tcgp\//.test(c.image || "") && !/^(?:[AB]\d+[a-z]?|P-[AB])-/i.test(c.id);
+
 function setIdOf(id){ const i = id.lastIndexOf("-"); return i > 0 ? id.slice(0, i) : id; }
 
 async function loadArtist(a){
@@ -408,25 +441,26 @@ async function loadArtist(a){
   if (a.kind === "top") return;
   if (a.kind === "poke") return loadPokemon(a);
   const k = akey(a);
-  if (mem.cards[k] || mem.loading[k]) return;
-  mem.loading[k] = true; delete mem.errors[k]; render();
+  if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
+  mem.loading[k] = true; render();
   try {
     const [sets, data] = await Promise.all([
       loadSets(a.lang),
       getJSON(`${API}/${a.lang}/illustrators/${encodeURIComponent(a.name)}`)
     ]);
     const raw = Array.isArray(data) ? data : (data.cards || []);
-    mem.cards[k] = raw.map(c => {
+    mem.cards[k] = raw.filter(isPhysical).map(c => {
       const sid = setIdOf(c.id);
       return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
                setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
     });
-    a.total = mem.cards[k].length; save();
+    a.total = mem.cards[k].length; save(); delete mem.errors[k]; remember(k);
     fillDetails(a);
   } catch(e){
-    mem.errors[k] = e.status === 404
+    const msg = e.status === 404
       ? `TCGdex has no artist named “${a.name}” for these cards. Names must match exactly; pick one from the suggestions as you type.`
-      : `Couldn’t reach TCGdex (${e.message}). Check your internet connection and reload. This page needs to be opened as a file in your browser, not inside a preview window.`;
+      : `Couldn’t reach TCGdex (${e.message}).`;
+    if (e.status === 404) mem.errors[k] = msg; else useSaved(a, k, msg);
   } finally { delete mem.loading[k]; render(); }
 }
 
@@ -442,8 +476,8 @@ function isCardOf(cardName, poke){
 }
 async function loadPokemon(a){
   const k = lkey(a);
-  if (mem.cards[k] || mem.loading[k]) return;
-  mem.loading[k] = true; delete mem.errors[k]; render();
+  if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
+  mem.loading[k] = true; render();
   try {
     // Search on the longest word of the name (avoids apostrophes etc.), then keep only real matches.
     const term = a.name.split(/[^\p{L}\p{N}]+/u).sort((x, y) => y.length - x.length)[0] || a.name;
@@ -451,24 +485,25 @@ async function loadPokemon(a){
       loadSets(a.lang),
       getJSON(`${API}/${a.lang}/cards?name=${encodeURIComponent(term)}`).catch(e => { if (e.status === 404) return []; throw e; })
     ]);
-    mem.cards[k] = raw.filter(c => isCardOf(c.name, a.name)).map(c => {
+    mem.cards[k] = raw.filter(c => isPhysical(c) && isCardOf(c.name, a.name)).map(c => {
       const sid = setIdOf(c.id);
       return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
                setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
     });
+    delete mem.errors[k]; remember(k);
     if (!mem.cards[k].length) mem.errors[k] = `TCGdex has no cards named “${a.name}” in this language. Check the spelling, or pick a name from the suggestions as you type.`;
     a.total = mem.cards[k].length; save();
     fillDetails(a);
   } catch(e){
-    mem.errors[k] = `Couldn’t reach TCGdex (${e.message}). Check your internet connection and reload.`;
+    useSaved(a, k, `Couldn’t reach TCGdex (${e.message}).`);
   } finally { delete mem.loading[k]; render(); }
 }
 
 // Every English special illustration rare, from TCGdex's rarity list (same shape as an artist's list).
 async function loadSir(a){
   const k = lkey(a);
-  if (mem.cards[k] || mem.loading[k]) return;
-  mem.loading[k] = true; delete mem.errors[k]; render();
+  if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
+  mem.loading[k] = true; render();
   try {
     const sets = await loadSets("en");
     let parts;
@@ -481,22 +516,23 @@ async function loadSir(a){
     }
     if (!parts.some(Boolean)) throw new Error("no response");
     const raw = [...new Map(parts.filter(Boolean).flat().map(c => [c.id, c])).values()];
-    mem.cards[k] = raw.map(c => {
+    mem.cards[k] = raw.filter(isPhysical).map(c => {
       const sid = setIdOf(c.id);
       return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
                setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
     });
+    delete mem.errors[k]; remember(k);
     fillDetails(a, !isShowing(a)); // owned ones right away (for totals); the rest when the tab is opened
   } catch(e){
-    mem.errors[k] = `Couldn’t load S.I.R. cards from TCGdex (${e.message}). Check your internet connection and reload.`;
+    useSaved(a, k, `Couldn’t load these cards from TCGdex (${e.message}).`);
   } finally { delete mem.loading[k]; render(); }
 }
 
 // Every card whose name ends in "EX" or "ex" (e.g. "M Charizard EX", "Mega Gallade ex"), English only.
 async function loadEx(){
   const a = EX_LIST, k = lkey(a);
-  if (mem.cards[k] || mem.loading[k]) return;
-  mem.loading[k] = true; delete mem.errors[k]; render();
+  if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
+  mem.loading[k] = true; render();
   try {
     const sets = await loadSets("en");
     // Ask for names ending in "EX" and in "ex" (in case the search is case-sensitive), then merge.
@@ -504,15 +540,16 @@ async function loadEx(){
     let raw = ends.filter(Boolean).flat();
     if (!ends.some(Boolean)) raw = await getJSON(`${API}/en/cards?name=ex`); // plain "contains" search as a fallback
     raw = [...new Map(raw.map(c => [c.id, c])).values()];
-    mem.cards[k] = raw.filter(c => isEX(c.name)).map(c => {
+    mem.cards[k] = raw.filter(c => isPhysical(c) && isEX(c.name)).map(c => {
       const sid = setIdOf(c.id);
       return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
                setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
     });
     // Prices for owned EX cards right away (for totals); the rest load when the category is opened.
+    delete mem.errors[k]; remember(k);
     fillDetails(a, state.cat !== "ex");
   } catch(e){
-    mem.errors[k] = `Couldn’t load EX cards from TCGdex (${e.message}). Check your internet connection and reload.`;
+    useSaved(a, k, `Couldn’t load EX cards from TCGdex (${e.message}).`);
   } finally { delete mem.loading[k]; render(); }
 }
 
@@ -739,6 +776,8 @@ function renderGrid(){
   st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
     : cards.length === 0 ? (a.kind in FIXED ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
+  const note = a.kind === "top" ? (Object.keys(mem.stale).length ? "TCGdex (the card database) isn’t responding right now, so some cards come from your saved copy." : "") : mem.notes[k];
+  if (note) st.textContent = "⚠️ " + note + " " + st.textContent;
   $("grid").innerHTML = list.map((c, i) => {
     const own = !!state.owned[ckey(cardLang(a, c), c.id)], d = state.details[ckey(cardLang(a, c), c.id)] || {};
     const sn = setName(a, c), pr = priceOf(a, c);
