@@ -25,6 +25,7 @@ jobs:
           PATHS: ${{ inputs.paths }}
           MAX: ${{ inputs.max_chars }}
         run: |
+          set -f  # keep * and ? in paths literal
           for p in $PATHS; do
             case "$p" in /v2/*) ;; *) echo "skipping $p (must start with /v2/)"; continue;; esac
             echo "===== $p"
