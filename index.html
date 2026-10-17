@@ -367,13 +367,15 @@ function pickPrice(pricing){
   return null;
 }
 const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-// TCGdex price first. For English cards TCGdex can't price in dollars, fall back to
+// Price order: the exact TCGplayer listing in today's prices.json (a Full Arts version first, else the card's
+// main listing), then TCGdex's own price. For English cards TCGdex can't price in dollars, fall back to
 // prices.json: TCGplayer prices downloaded daily by a GitHub Action (scripts/build-prices.mjs).
 function priceOf(a, c){
   const k = ckey(cardLang(a, c), c.id), fa = faEntry(k);
   if (fa?.tp && tcgp?.ids?.[fa.tp] != null) return { p: { v: tcgp.ids[fa.tp], c: "USD" }, t: Date.now() }; // exact TCGplayer version
   if (fa?.vid && state.prices[k]?.v?.[fa.vid]?.c === "USD") return { p: state.prices[k].v[fa.vid], t: state.prices[k].t };
   const pr = state.prices[k];
+  if (pr?.tp && tcgp?.ids?.[pr.tp] != null) return { p: { v: tcgp.ids[pr.tp], c: "USD" }, t: pr.t }; // today's TCGplayer price
   if (!pr || pr.p?.c === "USD" || cardLang(a, c) !== "en") return pr;
   const v = tcgplayerPrice(c, setName(a, c));
   return v != null ? { p: { v, c: "USD" }, t: pr.t } : pr;
@@ -534,10 +536,15 @@ async function loadEx(){
 
 // Remember a card's rarity, set and prices (overall, and per version for cards with several versions).
 function keepDetails(lang, d, id = d.id){
-  const k = ckey(lang, id), v = {};
-  (d.variants_detailed || []).forEach(x => { const pp = pickPrice(x.pricing); if (x.variantId && pp) v[x.variantId] = pp; });
+  const k = ckey(lang, id), v = {}, vs = d.variants_detailed || [];
+  vs.forEach(x => { const pp = pickPrice(x.pricing); if (x.variantId && pp) v[x.variantId] = pp; });
+  // The card's main TCGplayer listing (holo, else regular, else reverse; not stamped or jumbo versions),
+  // so its price can come from the fresh daily download (prices.json "ids") rather than TCGdex's older copy.
+  const plain = vs.filter(x => !x.stamp?.length && (x.size || "standard") === "standard");
+  const main = ["holo", "normal", "reverse"].map(t => plain.find(x => x.type === t)).find(Boolean) || plain[0];
+  const tp = main?.thirdParty?.tcgplayer;
   state.details[k] = { r: d.rarity || "", s: d.set?.name || "" };
-  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(Object.keys(v).length ? { v } : {}) };
+  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(tp ? { tp } : {}), ...(Object.keys(v).length ? { v } : {}) };
 }
 
 // ----- Full Arts helpers -----

@@ -25,7 +25,7 @@ The owner is new to coding. Explain things in plain language and give click-by-c
 - Don't break existing saved data: keep the localStorage key and backup format compatible.
 
 ## Prices
-- Artist Binder uses TCGdex `pricing` first (TCGplayer USD, else Cardmarket EUR). TCGdex returns `pricing: null` for many cards.
+- Price order in `priceOf`: (1) a Full Arts entry's chosen version `tp` → `prices.json` `ids`; (2) the card's main TCGplayer listing (`state.prices[k].tp`, from TCGdex `variants_detailed[].thirdParty.tcgplayer`: holo > normal > reverse, unstamped, standard size) → `ids` (fresh daily; TCGdex's own TCGplayer copy can be days old); (3) TCGdex `pricing` (TCGplayer USD, else Cardmarket EUR; often `null`); (4) name/number matching below.
 - Fallback for English cards: `prices.json`, built daily by `.github/workflows/prices.yml` running `scripts/build-prices.mjs`, which downloads TCGplayer prices from TCGCSV (https://tcgcsv.com, category 3). It also writes `ids` (TCGplayer productId → price) for exact versions. The app matches by normalized card number + name, then best set-name overlap. Keep `normNum`/`normName` identical in both files.
 - The workflow commits `prices.json` to the branch daily, so always `git pull` before pushing.
 - Japanese cards aren't covered by the fallback yet (TCGplayer category 85 uses English names; TCGdex `ja` names are Japanese).
