@@ -131,6 +131,30 @@ button.total.on strong{color:#1C2433}
 .which{display:block;font-size:.8rem;margin-top:.35rem;color:var(--muted)}
 .which select{width:100%;margin-top:.15rem;font-size:.85rem;padding:.2rem;border-radius:6px;border:1px solid var(--line);background:var(--page)}
 .meta .remove{border:0;background:none;padding:.2rem 0 0;color:var(--muted);text-decoration:underline;font-size:.78rem;cursor:pointer}
+.insights{margin:0 0 1.5rem}
+.ins-head h2,.grid-title{font:800 1.25rem/1.2 var(--display);margin:0 0 .75rem}
+.grid-title{margin-top:.5rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:.9rem}
+.kpi{background:var(--desk);border-radius:12px;padding:.75rem .9rem;display:flex;flex-direction:column;gap:.15rem}
+.kpi-label{color:var(--muted);font-size:.85rem}
+.kpi-value{font:700 clamp(1.25rem,4vw,1.6rem)/1.1 var(--display);color:var(--ink)}
+.kpi-sub{color:var(--muted);font-size:.78rem}
+.ins-card{background:var(--desk);border-radius:12px;padding:.8rem .95rem}
+.ins-card h3{font:700 1rem/1.2 var(--display);margin:0 0 .5rem}
+.ins-card h3 .pd-change{font:400 .85rem var(--body);margin-left:.5rem}
+.ins-wide{margin-bottom:.9rem}
+.ins-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.5rem 1rem}
+.ins-row .seg button{width:auto;margin:0}
+.ins-switch{margin:0 0 .6rem;color:var(--muted);font-size:.9rem;justify-content:flex-start}
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:.9rem}
+.ins-hint{color:var(--muted);font-size:.78rem;margin:-.25rem 0 .5rem}
+.bars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.45rem}
+.bars li{display:grid;grid-template-columns:minmax(6rem,38%) 1fr auto;align-items:center;gap:.6rem;font-size:.88rem}
+.bar-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{height:14px;border-radius:0 4px 4px 0;background:var(--line);overflow:hidden}
+.bar-fill{display:block;height:100%;background:var(--chart);border-radius:0 4px 4px 0}
+.bar-val{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ins-more{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:.5rem 0 0;font-size:.85rem}
 dialog.pricedlg{max-width:min(94vw,760px);width:100%;background:var(--page);color:var(--ink);border-radius:14px;padding:1rem 1.1rem}
 .pd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
 .pd-head h3{font:800 1.3rem/1.2 var(--display);margin:0}
@@ -145,7 +169,7 @@ dialog.pricedlg{max-width:min(94vw,760px);width:100%;background:var(--page);colo
 .pd-ranges{margin:.6rem 0 .4rem}
 .pd-ranges button{width:auto;margin:0}
 .pd-chart{position:relative}
-.pd-chart svg{width:100%;height:auto;display:block;touch-action:none}
+.pd-chart svg{display:block;touch-action:none;max-width:100%}
 .pd-grid{stroke:var(--line);stroke-width:1}
 .pd-axis{fill:var(--muted);font:12px var(--body)}
 .pd-line{fill:none;stroke:var(--chart);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
@@ -781,7 +805,9 @@ function render(){
         <option value="value" ${ui.sort==="value"?"selected":""}>Highest value first</option>
       </select>
     </div>`;
-  m.innerHTML = (a.kind === "fa" ? `<section class="picker" id="picker" hidden></section>` : "") + `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
+  m.innerHTML = (a.kind === "fa" ? `<section class="picker" id="picker" hidden></section>` : "")
+    + (a.kind === "top" ? `<section class="insights" id="insights"></section><h2 class="grid-title">Your cards, most valuable first</h2>` : "")
+    + `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
   if (a.kind === "fa") renderPicker();
   $("q").addEventListener("input", e => { ui.q = e.target.value; renderGrid(); });
   $("setSel").addEventListener("change", e => { ui.set = e.target.value; renderGrid(); });
@@ -859,6 +885,7 @@ function renderGrid(){
       <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${c.vlabel ? `<span>${esc(c.vlabel)}</span>` : d.r ? `<span>${esc(d.r)}</span>` : ""}${priceTxt}${a.kind === "fa" && !viewOnly ? `<button class="remove" data-fa-remove="${esc(ckey(cardLang(a, c), c.id))}">Remove from Full Arts</button>` : ""}</div></li>`;
   }).join("");
   renderProgress(a);
+  if (a.kind === "top") renderInsights();
 }
 
 // Events
@@ -1052,6 +1079,139 @@ function onPageClick(e){
   }
 }
 
+// Line chart of daily prices with a change summary on hover (used by the card pop-up and the collection chart).
+function drawLineChart(box, pts, emptyMsg){
+  if (pts.length < 2){ box.innerHTML = `<p class="pd-empty">${emptyMsg || ""}</p>`; return; }
+  const last = pts[pts.length - 1].v;
+  // Drawn at the box's real width so text stays 12px on any screen.
+  const W = Math.max(260, Math.round(box.clientWidth || 600)), H = W < 420 ? 180 : 220, padL = 60, padR = 14, padT = 12, padB = 26;
+  const lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
+  const span = hi - lo || hi * .1 || 1, yMin = Math.max(0, lo - span * .15), yMax = hi + span * .15;
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  const X = t => padL + (t1 === t0 ? .5 : (t - t0) / (t1 - t0)) * (W - padL - padR);
+  const Y = v => padT + (1 - (v - yMin) / (yMax - yMin)) * (H - padT - padB);
+  const ticks = [0, .5, 1].map(f => yMin + f * (yMax - yMin));
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");
+  const area = line + `L${X(t1).toFixed(1)},${Y(yMin)}L${X(t0).toFixed(1)},${Y(yMin)}Z`;
+  const fmtDate = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Price history chart">
+    ${ticks.map(v => `<line class="pd-grid" x1="${padL}" x2="${W - padR}" y1="${Y(v)}" y2="${Y(v)}"/><text class="pd-axis" x="${padL - 8}" y="${Y(v) + 4}" text-anchor="end">${money(v, "USD").replace(/\.\d\d$/, v < 10 ? (money(v, "USD").match(/\.\d\d$/) || [""])[0] : "")}</text>`).join("")}
+    <text class="pd-axis" x="${padL}" y="${H - 6}">${fmtDate(t0)}</text>
+    <text class="pd-axis" x="${W - padR}" y="${H - 6}" text-anchor="end">${fmtDate(t1)}</text>
+    <path class="pd-area" d="${area}"/><path class="pd-line" d="${line}"/>
+    <circle class="pd-dot" cx="${X(t1)}" cy="${Y(last)}" r="4.5"/>
+    <g class="pd-hover" hidden><line class="pd-cross" y1="${padT}" y2="${H - padB}"/><circle class="pd-dot" r="4.5"/></g>
+    <rect class="pd-hit" x="${padL}" y="0" width="${W - padL - padR}" height="${H}"/>
+  </svg><div class="pd-tip" hidden></div>`;
+  const svg = box.querySelector("svg"), hov = svg.querySelector(".pd-hover"), tip = box.querySelector(".pd-tip");
+  const move = ev => {
+    const r = svg.getBoundingClientRect(), x = ((ev.touches?.[0] || ev).clientX - r.left) / r.width * W;
+    const p = pts.reduce((b, q) => Math.abs(X(q.t) - x) < Math.abs(X(b.t) - x) ? q : b);
+    hov.hidden = false; hov.querySelector("line").setAttribute("x1", X(p.t)); hov.querySelector("line").setAttribute("x2", X(p.t));
+    hov.querySelector("circle").setAttribute("cx", X(p.t)); hov.querySelector("circle").setAttribute("cy", Y(p.v));
+    tip.hidden = false; tip.innerHTML = `<b>${money(p.v, "USD")}</b><span>${fmtDate(p.t)}</span>`;
+    const px = X(p.t) / W * r.width; tip.style.left = Math.min(Math.max(px, 50), r.width - 50) + "px"; tip.style.top = (Y(p.v) / H * r.height - 8) + "px";
+  };
+  const leave = () => { hov.hidden = true; tip.hidden = true; };
+  svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move); svg.addEventListener("pointerleave", leave);
+}
+
+// ----- Collection analysis (top of the Most valuable view) -----
+const ins = { by: "count", range: "1M", showAll: {}, portfolio: null, portfolioKey: "" };
+// Every owned card once, with what it belongs to: categories, artist tabs, Pokémon tabs, set and price.
+function ownedProfile(){
+  const cards = new Map();
+  const note = (k, c, a, fn) => { const e = cards.get(k) || { c, lang: cardLang(a, c), a, artists: new Set(), pokes: new Set(), fa: false, ex: false };
+    fn(e); cards.set(k, e); };
+  allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
+    const k = ckey(cardLang(a, c), c.id); if (!state.owned[k]) return;
+    note(k, c, a, e => { if (a.kind === "fa") e.fa = true; else if (a.kind === "ex") e.ex = true;
+      else if (a.kind === "poke") e.pokes.add(a.name); else e.artists.add(a.name); });
+  }));
+  cards.forEach((e, k) => { e.k = k; e.price = priceOf(e.a, e.c)?.p; e.set = setName(e.a, e.c); });
+  return [...cards.values()];
+}
+function renderInsights(){
+  const box = $("insights"); if (!box) return;
+  const all = ownedProfile(), n = all.length;
+  if (!n){ box.innerHTML = ""; return; }
+  const usd = e => e.price?.c === "USD" ? e.price.v : 0;
+  const total = all.reduce((t, e) => t + usd(e), 0);
+  const priced = all.filter(e => usd(e) > 0).sort((x, y) => usd(y) - usd(x));
+  const TOPK = priced.length > 10 ? 10 : Math.min(3, priced.length), topSum = priced.slice(0, TOPK).reduce((t, e) => t + usd(e), 0);
+  const eur = all.filter(e => e.price?.c === "EUR").length;
+  const tiles = [
+    ["Collection value", money(total, "USD"), eur ? `plus ${eur} card${eur === 1 ? "" : "s"} priced only in euros` : "TCGplayer market prices"],
+    ["Cards owned", n.toLocaleString(), `${priced.length} with a dollar price`],
+    ["Average card", money(priced.length ? total / priced.length : 0, "USD"), priced.length ? `middle card ${money(usd(priced[Math.floor(priced.length / 2)]), "USD")}` : ""],
+    [`Top ${TOPK} card${TOPK === 1 ? "" : "s"}`, total ? Math.round(topSum / total * 100) + "%" : "–", "of the collection’s value"],
+  ];
+  // breakdown groups
+  const group = (label, keyOf) => { const g = new Map();
+    all.forEach(e => [].concat(keyOf(e)).filter(Boolean).forEach(name => { const r = g.get(name) || { name, n: 0, v: 0 }; r.n++; r.v += usd(e); g.set(name, r); }));
+    return { label, rows: [...g.values()] }; };
+  const sections = [
+    group("By category", e => [e.fa && "Full Arts", e.ex && "EX / Mega EX", e.pokes.size && "In a Pokémon tab", e.artists.size && "In an artist tab"]),
+    group("By artist", e => [...e.artists]),
+    group("By Pokémon", e => [...e.pokes]),
+    group("By set", e => e.set),
+  ].filter(sec => sec.rows.length);
+  const bars = sec => {
+    const metric = r => ins.by === "value" ? r.v : r.n;
+    const rows = sec.rows.sort((x, y) => metric(y) - metric(x) || x.name.localeCompare(y.name));
+    const max = Math.max(...rows.map(metric), 1), LIMIT = 8, open = ins.showAll[sec.label];
+    const shown = open ? rows : rows.slice(0, LIMIT);
+    return `<div class="ins-card"><h3>${sec.label}</h3>
+      ${sec.label === "By category" ? `<p class="ins-hint">A card can be in more than one category, so these can add up to more than 100%.</p>` : ""}
+      <ul class="bars">${shown.map(r => {
+        const pctN = Math.round(r.n / n * 100), pctV = total ? Math.round(r.v / total * 100) : 0;
+        const tip = `${r.name}: ${r.n} card${r.n === 1 ? "" : "s"} (${pctN}% of your cards), ${money(r.v, "USD")} (${pctV}% of value)`;
+        return `<li title="${esc(tip)}"><span class="bar-name">${esc(r.name)}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${Math.max(2, metric(r) / max * 100)}%"></span></span>
+          <span class="bar-val">${ins.by === "value" ? `${money(r.v, "USD")} · ${pctV}%` : `${r.n} · ${pctN}%`}</span></li>`; }).join("")}</ul>
+      ${rows.length > LIMIT ? `<button class="ins-more" data-ins-more="${esc(sec.label)}">${open ? "Show fewer" : `Show all ${rows.length}`}</button>` : ""}</div>`;
+  };
+  box.innerHTML = `<div class="ins-head"><h2>Collection analysis</h2></div>
+    <div class="kpis">${tiles.map(([l, v, sub]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="kpi-value">${v}</span><span class="kpi-sub">${esc(sub)}</span></div>`).join("")}</div>
+    <div class="ins-card ins-wide"><div class="ins-row"><h3>Collection value over time <span class="pd-change" id="pfChange"></span></h3>
+      <div class="seg" role="group" aria-label="Time range">${RANGES.map(([r]) => `<button data-prange="${r}" aria-pressed="${ins.range === r}">${r}</button>`).join("")}</div></div>
+      <div class="pd-chart" id="pfChart"><p class="pd-empty">Loading price history…</p></div><p class="pd-note" id="pfNote"></p></div>
+    <div class="ins-row ins-switch"><span>Rank the breakdowns by</span><div class="seg" role="group" aria-label="Rank by">
+      ${[["count", "Number of cards"], ["value", "Value"]].map(([v, l]) => `<button data-insby="${v}" aria-pressed="${ins.by === v}">${l}</button>`).join("")}</div></div>
+    <div class="ins-grid">${sections.map(bars).join("")}</div>`;
+  drawPortfolio(all);
+}
+// What the cards you own now were worth on each day (TCGplayer prices from history/; carries the last known price forward).
+async function drawPortfolio(all){
+  const withTp = all.map(e => ({ e, tp: faEntry(e.k)?.tp || state.prices[e.k]?.tp })).filter(x => x.tp);
+  const key = withTp.map(x => x.tp).sort().join(",");
+  if (ins.portfolioKey !== key){
+    ins.portfolioKey = key; ins.portfolio = null;
+    const series = await Promise.all(withTp.map(x => loadHistory(x.tp)));
+    if (ins.portfolioKey !== key) return;
+    const days = new Map(); // day → total
+    const allDays = [...new Set(series.flat().filter(Boolean).map(p => p.t))].sort((a, b) => a - b);
+    series.forEach(sr => {
+      if (!sr?.length) return;
+      let j = 0, lastV = sr[0].v; // before a card's first price, assume that first price
+      allDays.forEach(t => { while (j < sr.length && sr[j].t <= t){ lastV = sr[j].v; j++; } days.set(t, (days.get(t) || 0) + lastV); });
+    });
+    ins.portfolio = { pts: allDays.map(t => ({ t, v: days.get(t) })), counted: series.filter(x => x?.length).length, total: all.length };
+  }
+  const box = $("pfChart"); if (!box || !ins.portfolio) return;
+  const { pts: allPts, counted, total } = ins.portfolio;
+  const span = RANGES.find(r => r[0] === ins.range)[1], end = allPts.length ? allPts[allPts.length - 1].t : 0;
+  const pts = allPts.filter(p => end - p.t < span * 86400000);
+  $("pfNote").textContent = allPts.length
+    ? `What the cards you own today were worth on each day, at TCGplayer market prices (${counted} of ${total} cards have a price history). History starts ${new Date(allPts[0].t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}.`
+    : "";
+  drawLineChart(box, pts, allPts.length ? "Not enough history yet; check back in a few days." : "None of your cards have a price history yet.");
+  if (pts.length >= 2 && $("pfChange")){
+    const d = pts[pts.length - 1].v - pts[0].v, pct = pts[0].v ? d / pts[0].v * 100 : 0;
+    $("pfChange").textContent = `${d >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(d), "USD")} (${d >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%) over ${ins.range === "All" ? "all history" : ins.range}`;
+  }
+}
+
 // ----- Price history pop-up -----
 // TCGplayer market price per day, from history/NNN.json (built daily by scripts/build-history.mjs).
 const RANGES = [["1W", 7], ["1M", 30], ["3M", 91], ["6M", 182], ["1Y", 365], ["All", Infinity]];
@@ -1097,40 +1257,16 @@ function drawPriceHistory(){
     return;
   }
   const first = pts[0].v, last = pts[pts.length - 1].v, diff = last - first, pct = first ? diff / first * 100 : 0;
+  drawLineChart($("pdChart"), pts);
   $("pdChange").textContent = `${diff >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(diff), "USD")} (${diff >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%) over ${ph.range === "All" ? "all history" : ph.range}`;
   $("pdNote").textContent = `TCGplayer market price, one point per day.` + (end - all[0].t < days * 86400000 && ph.range !== "All" ? ` History starts ${since}, so this shows everything so far.` : "");
-  // --- chart ---
-  const W = 600, H = 220, padL = 56, padR = 14, padT = 12, padB = 26;
-  const lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
-  const span = hi - lo || hi * .1 || 1, yMin = Math.max(0, lo - span * .15), yMax = hi + span * .15;
-  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
-  const X = t => padL + (t1 === t0 ? .5 : (t - t0) / (t1 - t0)) * (W - padL - padR);
-  const Y = v => padT + (1 - (v - yMin) / (yMax - yMin)) * (H - padT - padB);
-  const ticks = [0, .5, 1].map(f => yMin + f * (yMax - yMin));
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");
-  const area = line + `L${X(t1).toFixed(1)},${Y(yMin)}L${X(t0).toFixed(1)},${Y(yMin)}Z`;
-  const fmtDate = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-  $("pdChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Price history chart">
-    ${ticks.map(v => `<line class="pd-grid" x1="${padL}" x2="${W - padR}" y1="${Y(v)}" y2="${Y(v)}"/><text class="pd-axis" x="${padL - 8}" y="${Y(v) + 4}" text-anchor="end">${money(v, "USD").replace(/\.\d\d$/, v < 10 ? (money(v, "USD").match(/\.\d\d$/) || [""])[0] : "")}</text>`).join("")}
-    <text class="pd-axis" x="${padL}" y="${H - 6}">${fmtDate(t0)}</text>
-    <text class="pd-axis" x="${W - padR}" y="${H - 6}" text-anchor="end">${fmtDate(t1)}</text>
-    <path class="pd-area" d="${area}"/><path class="pd-line" d="${line}"/>
-    <circle class="pd-dot" cx="${X(t1)}" cy="${Y(last)}" r="4.5"/>
-    <g class="pd-hover" hidden><line class="pd-cross" y1="${padT}" y2="${H - padB}"/><circle class="pd-dot" r="4.5"/></g>
-    <rect class="pd-hit" x="${padL}" y="0" width="${W - padL - padR}" height="${H}"/>
-  </svg><div class="pd-tip" hidden></div>`;
-  const svg = $("pdChart").querySelector("svg"), hov = svg.querySelector(".pd-hover"), tip = $("pdChart").querySelector(".pd-tip");
-  const move = ev => {
-    const r = svg.getBoundingClientRect(), x = ((ev.touches?.[0] || ev).clientX - r.left) / r.width * W;
-    const p = pts.reduce((b, q) => Math.abs(X(q.t) - x) < Math.abs(X(b.t) - x) ? q : b);
-    hov.hidden = false; hov.querySelector("line").setAttribute("x1", X(p.t)); hov.querySelector("line").setAttribute("x2", X(p.t));
-    hov.querySelector("circle").setAttribute("cx", X(p.t)); hov.querySelector("circle").setAttribute("cy", Y(p.v));
-    tip.hidden = false; tip.innerHTML = `<b>${money(p.v, "USD")}</b><span>${fmtDate(p.t)}</span>`;
-    const px = X(p.t) / W * r.width; tip.style.left = Math.min(Math.max(px, 50), r.width - 50) + "px"; tip.style.top = (Y(p.v) / H * r.height - 8) + "px";
-  };
-  const leave = () => { hov.hidden = true; tip.hidden = true; };
-  svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move); svg.addEventListener("pointerleave", leave);
 }
+let insResize; addEventListener("resize", () => { clearTimeout(insResize); insResize = setTimeout(() => { if (state.cat === "top") renderInsights(); }, 200); });
+document.addEventListener("click", e => {
+  const pr = e.target.closest("[data-prange]"); if (pr){ ins.range = pr.dataset.prange; renderInsights(); return; }
+  const by = e.target.closest("[data-insby]"); if (by){ ins.by = by.dataset.insby; renderInsights(); return; }
+  const more = e.target.closest("[data-ins-more]"); if (more){ ins.showAll[more.dataset.insMore] ^= 1; renderInsights(); }
+});
 $("pdRanges").addEventListener("click", e => { const b = e.target.closest("[data-range]"); if (b){ ph.range = b.dataset.range; drawPriceHistory(); } });
 $("pdClose").addEventListener("click", () => $("priceDlg").close());
 $("priceDlg").addEventListener("click", e => { if (e.target === $("priceDlg")) $("priceDlg").close(); });
