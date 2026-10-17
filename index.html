@@ -618,11 +618,40 @@ async function loadMasterSet(a){
         tcgImg: `https://tcgplayer-cdn.tcgplayer.com/product/${c.p}_200w.jpg`, tcgImgL: `https://tcgplayer-cdn.tcgplayer.com/product/${c.p}_in_1000x1000.jpg`,
       }));
     }));
+    await linkToTcgdex(sets, cards);
     mem.cards[k] = cards; delete mem.errors[k]; remember(k);
   } catch(e){
     if (e.notReady) mem.errors[k] = "This set’s checklist isn’t ready yet. It gets built with tonight’s price update; check back tomorrow.";
     else useSaved(a, k, `Couldn’t load this set’s checklist (${e.message}).`);
   } finally { delete mem.loading[k]; render(); }
+}
+
+// Match each TCGplayer set to its TCGdex set by name, then each card by number (or by name when the subset
+// keeps the original card numbers, like the Classic Collection). Only a card's first printing gets the link.
+async function linkToTcgdex(sets, cards){
+  try {
+    const tSets = await loadSets("en");
+    for (const st of sets){
+      if (!st) continue;
+      const want = setWords(shortSetName(st.name));
+      let best = null, bestScore = 0;
+      for (const [id, info] of Object.entries(tSets)){
+        const have = setWords(info.name), shared = [...want].filter(w => have.has(w)).length;
+        const score = shared ? shared / Math.min(want.size, have.size) + shared / (want.size + have.size) : 0;
+        if (score > bestScore){ best = id; bestScore = score; }
+      }
+      if (!best || bestScore < 1) continue;
+      const tc = (await getJSON(`${API}/en/sets/${encodeURIComponent(best)}`)).cards || [];
+      const byNum = new Map(tc.map(x => [normNum(x.localId), x]));
+      const byName = new Map(); tc.forEach(x => { const n = normName(x.name); byName.set(n, byName.has(n) ? null : x); }); // null = name not unique
+      const firsts = cards.filter(c => c.setId === String(st.id) && !cards.some(o => o.pid === c.pid && o.order < c.order));
+      for (const c of firsts){
+        const n = normName(c.name), m = byNum.get(normNum(c.num));
+        const hit = m && (normName(m.name) === n || normName(m.name).startsWith(n) || n.startsWith(normName(m.name))) ? m : byName.get(n);
+        if (hit) c.link = ckey("en", hit.id);
+      }
+    }
+  } catch(e){ /* TCGdex unreachable: the checklist still works, just without links */ }
 }
 
 // Every card whose name ends in "EX" or "ex" (e.g. "M Charizard EX", "Mega Gallade ex"), English only.
@@ -732,16 +761,24 @@ function cardsOf(a, sub = state.exSub){
   if (!cards || a.kind !== "ex" || sub === "all") return cards;
   return cards.filter(c => sub === "mega" ? isMega(c.name) : !isMega(c.name));
 }
-function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => state.owned[ckey(cardLang(a, c), c.id)]).length; }
+// A master-set printing can be linked to the same card from TCGdex (c.link, e.g. "en:30th-023"), so a Pikachu
+// marked in a Pokémon tab also counts in the master set (and the other way round) and is counted once in totals.
+const ownKeys = (a, c) => { const k = ckey(cardLang(a, c), c.id); return c.link ? [k, c.link] : [k]; };
+const isOwned = (a, c) => ownKeys(a, c).some(k => state.owned[k]);
+const idKey = (a, c) => c.link || ckey(cardLang(a, c), c.id); // one key per physical card
+function setOwned(a, c, on){ ownKeys(a, c).forEach(k => { if (on) state.owned[k] = true; else delete state.owned[k]; }); }
+function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => isOwned(a, c)).length; }
 function allLists(){ return [FA_LIST, ...state.artists, ...state.pokemon, EX_LIST, ...state.masterSets]; }
 // Every owned card from every loaded list, each once, tagged with its language.
+// A card owned in two lists (say a Pokémon tab and a master set) counts once: the first copy, unless only a later one has a price.
+function keepFirstPriced(seen, k, a, c){ const e = seen.get(k); return !e || (!e._p?.p && !!priceOf(a, c)?.p); }
 function ownedEverywhere(){
   const seen = new Map();
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
-    const k = ckey(cardLang(a, c), c.id);
-    if (state.owned[k] && !seen.has(k)) seen.set(k, { ...c, lang: cardLang(a, c) });
+    const k = idKey(a, c);
+    if (isOwned(a, c) && keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: cardLang(a, c), _p: priceOf(a, c) });
   }));
-  return [...seen.values()];
+  return [...seen.values()].map(({ _p, ...c }) => c);
 }
 // The add-able lists (artists or Pokémon) for the current category, and which one is open.
 const userLists = () => state.cat === "poke" ? state.pokemon : state.cat === "ms" ? state.masterSets : state.artists;
@@ -871,9 +908,10 @@ function render(){
 function renderTotal(){
   const seen = new Map();
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
-    const k = ckey(cardLang(a, c), c.id);
-    if (state.owned[k] && !seen.has(k)) seen.set(k, priceOf(a, c));
+    const k = idKey(a, c);
+    if (isOwned(a, c) && keepFirstPriced(seen, k, a, c)) seen.set(k, { _p: priceOf(a, c) });
   }));
+  seen.forEach((v, k) => seen.set(k, v._p));
   $("total").hidden = seen.size === 0;
   $("total").innerHTML = `<span class="lbl">${viewOnly ? "Binder" : "My binder"}: </span><strong>${sumValue([...seen.values()])}</strong> <small>${seen.size} card${seen.size === 1 ? "" : "s"} · top ›</small>`;
 }
@@ -884,7 +922,7 @@ function renderProgress(a){
   if ($("count")) $("count").innerHTML = a.kind === "top" ? `<strong>${have}</strong> owned card${have === 1 ? "" : "s"}, highest value first`
     : `<strong>${have}</strong> of ${cards.length} owned (${pct}%)`;
   if ($("value")){
-    const owned = cards.filter(c => state.owned[ckey(cardLang(a, c), c.id)]);
+    const owned = cards.filter(c => isOwned(a, c));
     const pending = owned.filter(c => !priceOf(a, c)).length;
     $("value").innerHTML = `Owned value <strong>${sumValue(owned.map(c => priceOf(a, c)))}</strong>`
       + (pending ? ` <small>(${pending} still loading)</small>` : "");
@@ -901,7 +939,7 @@ function renderGrid(){
   if (!cards) { st.textContent = "Loading cards from TCGdex…"; st.className = "status"; $("grid").innerHTML = ""; return; }
   const q = ui.q.trim().toLowerCase();
   let list = cards.filter(c => {
-    const own = !!state.owned[ckey(cardLang(a, c), c.id)];
+    const own = isOwned(a, c);
     if (a.kind === "top") return own && (!ui.set || c.setId === ui.set) && (!q || c.name.toLowerCase().includes(q));
     if (ui.view === "owned" && !own) return false;
     if (ui.view === "missing" && own) return false;
@@ -924,7 +962,7 @@ function renderGrid(){
   const note = a.kind === "top" ? (Object.keys(mem.stale).length ? "TCGdex (the card database) isn’t responding right now, so some cards come from your saved copy." : "") : mem.notes[k];
   if (note) st.textContent = "⚠️ " + note + " " + st.textContent;
   $("grid").innerHTML = list.map((c, i) => {
-    const own = !!state.owned[ckey(cardLang(a, c), c.id)], d = state.details[ckey(cardLang(a, c), c.id)] || {};
+    const own = isOwned(a, c), d = state.details[ckey(cardLang(a, c), c.id)] || {};
     const sn = setName(a, c), pr = priceOf(a, c);
     const priceTxt = !pr ? `<span class="price muted">Price loading…</span>`
       : pr.p ? `<span class="price">${money(pr.p.v, pr.p.c)}</span>` : `<span class="price muted">No price data</span>`;
@@ -1132,14 +1170,11 @@ function onPageClick(e){
   if (z){ $("zoomImg").src = z.dataset.zoom; $("zoomDlg").showModal(); return; }
   const t = e.target.closest(".toggle");
   if (t){
-    const a = activeList(), li = t.closest(".pocket"), lang = li.dataset.lang || a.lang, k = ckey(lang, li.dataset.id);
+    const a = activeList(), li = t.closest(".pocket"), lang = li.dataset.lang || a.lang;
+    const c = (cardsOf(a) || []).find(x => x.id === li.dataset.id && cardLang(a, x) === lang); if (!c) return;
     // A card you own opens its price history (unmarking lives in there); a missing card becomes owned.
-    if (state.owned[k] || viewOnly){
-      const c = (cardsOf(a) || []).find(x => x.id === li.dataset.id && cardLang(a, x) === lang);
-      if (c) openPriceHistory(a, c);
-      return;
-    }
-    state.owned[k] = true;
+    if (isOwned(a, c) || viewOnly){ openPriceHistory(a, c); return; }
+    setOwned(a, c, true);
     li.classList.add("owned"); t.setAttribute("aria-pressed", true);
     li.querySelector(".tag").textContent = "Owned";
     save(); renderProgress(a);
@@ -1192,7 +1227,8 @@ function ownedProfile(){
   const note = (k, c, a, fn) => { const e = cards.get(k) || { c, lang: cardLang(a, c), a, artists: new Set(), pokes: new Set(), mss: new Set(), fa: false, ex: false };
     fn(e); cards.set(k, e); };
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
-    const k = ckey(cardLang(a, c), c.id); if (!state.owned[k]) return;
+    const k = idKey(a, c); if (!isOwned(a, c)) return;
+    const old = cards.get(k); if (old && !priceOf(old.a, old.c)?.p && priceOf(a, c)?.p){ old.c = c; old.a = a; old.lang = cardLang(a, c); }
     note(k, c, a, e => { if (a.kind === "fa") e.fa = true; else if (a.kind === "ex") e.ex = true; else if (a.kind === "ms") e.mss.add(a.name);
       else if (a.kind === "poke") e.pokes.add(a.name); else e.artists.add(a.name); });
   }));
@@ -1252,7 +1288,7 @@ function renderInsights(){
 }
 // What the cards you own now were worth on each day (TCGplayer prices from history/; carries the last known price forward).
 async function drawPortfolio(all){
-  const withTp = all.map(e => ({ e, tp: faEntry(e.k)?.tp || state.prices[e.k]?.tp })).filter(x => x.tp);
+  const withTp = all.map(e => ({ e, tp: faEntry(e.k)?.tp || e.c.pid || state.prices[e.k]?.tp })).filter(x => x.tp);
   const key = withTp.map(x => x.tp).sort().join(",");
   if (ins.portfolioKey !== key){
     ins.portfolioKey = key; ins.portfolio = null;
@@ -1341,9 +1377,9 @@ $("pdClose").addEventListener("click", () => $("priceDlg").close());
 $("priceDlg").addEventListener("click", e => { if (e.target === $("priceDlg")) $("priceDlg").close(); });
 $("pdImg").addEventListener("click", () => { $("zoomImg").src = $("pdImg").dataset.zoom; $("zoomDlg").showModal(); });
 $("pdMissing").addEventListener("click", () => {
-  const { k, c } = ph; $("priceDlg").close();
-  delete state.owned[k]; save(); render();
-  showUndo(`${c.name} marked as missing.`, () => { state.owned[k] = true; save(); render(); });
+  const { a, c } = ph; $("priceDlg").close();
+  setOwned(a, c, false); save(); render();
+  showUndo(`${c.name} marked as missing.`, () => { setOwned(a, c, true); save(); render(); });
 });
 
 // A small message at the bottom with an Undo button, shown for 8 seconds.
