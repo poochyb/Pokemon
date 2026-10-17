@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "17 21 * * *"   # daily, after TCGCSV's daily refresh
   workflow_dispatch:         # lets you run it by hand from the Actions tab
+    inputs:
+      only_groups:
+        description: "Optional: TCGplayer set ids (comma-separated) to refresh just those sets' lists in sets/"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -21,14 +26,17 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/build-prices.mjs
+        env:
+          ONLY_GROUPS: ${{ inputs.only_groups }}
       - run: node scripts/build-history.mjs
+        if: ${{ !inputs.only_groups }}
       - name: Commit prices.json and price history if they changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add prices.json history
+          git add prices.json history sets
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
-          git commit -m "Update TCGplayer prices"
+          git commit -m "Update TCGplayer prices and set lists"
           # If another run saved first, rebuild on top of it instead of failing.
           for i in 1 2 3; do git push && exit 0; git pull --rebase -X theirs || { git rebase --abort; git reset --hard origin/$GITHUB_REF_NAME; exit 0; }; done
           exit 1

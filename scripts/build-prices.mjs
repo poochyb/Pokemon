@@ -2,7 +2,7 @@
 // writes a compact prices.json that the Artist Binder uses when TCGdex has no price.
 // Run with: node scripts/build-prices.mjs   (Node 20+, no packages needed)
 
-import { writeFile } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 
 const BASE = "https://tcgcsv.com/tcgplayer";
 const CATEGORY = 3; // Pokémon (English)
@@ -39,18 +39,26 @@ function bestPrice(rows) {
   return Math.round((p.marketPrice || p.midPrice) * 100) / 100;
 }
 
+// ONLY_GROUPS=24722,24837 refreshes just those sets' files in sets/ (for adding a new master set
+// without re-downloading everything); prices.json is left alone.
+const ONLY = (process.env.ONLY_GROUPS || "").split(/[\s,]+/).filter(Boolean).map(Number);
+
 // TCGCSV asks not to fetch the same prices more than once a day: skip if prices.json is under 20 hours old
 // (set FORCE_PRICES=1 to override).
 try {
   const prev = JSON.parse(await (await import("node:fs/promises")).readFile("prices.json", "utf8"));
   const ageHours = (Date.now() - Date.parse(prev.updated)) / 3600000;
-  if (ageHours < 20 && !process.env.FORCE_PRICES){
+  if (ageHours < 20 && !process.env.FORCE_PRICES && !ONLY.length){
     console.log(`prices.json is only ${ageHours.toFixed(1)} hours old; not downloading again today.`);
     process.exit(0);
   }
 } catch(e){ /* no previous file: download */ }
 
-const groups = await getJSON(`${BASE}/${CATEGORY}/groups`);
+const allGroups = await getJSON(`${BASE}/${CATEGORY}/groups`);
+const groups = ONLY.length ? allGroups.filter(g => ONLY.includes(g.groupId)) : allGroups;
+await mkdir("sets", { recursive: true });
+// sets/index.json: every Pokémon set TCGplayer lists (for picking a master set by name)
+await writeFile("sets/index.json", JSON.stringify(allGroups.map(g => ({ id: g.groupId, name: g.name, abbr: g.abbreviation || "", date: (g.publishedOn || "").slice(0, 10) }))));
 console.log(`${groups.length} groups`);
 
 const sets = [];
@@ -68,19 +76,28 @@ async function worker() {
     const byProduct = {};
     prices.forEach(p => (byProduct[p.productId] ||= []).push(p));
     const setIdx = sets.push(g.name) - 1;
+    // sets/<groupId>.json: every card in the set with each printing TCGplayer sells (Normal, Holofoil,
+    // Reverse Holofoil, ...) and its market price. This is the master-set checklist.
+    const list = [];
     for (const prod of products) {
       const num = prod.extendedData?.find(d => d.name === "Number")?.value;
       if (!num) continue; // sealed product, not a card
+      const printings = {};
+      (byProduct[prod.productId] || []).forEach(r => { printings[r.subTypeName || "Normal"] = r.marketPrice || r.midPrice || null; });
+      list.push({ p: prod.productId, n: prod.name, num, r: prod.extendedData?.find(d => d.name === "Rarity")?.value || "",
+                  s: Object.keys(printings).length ? printings : { Normal: null } });
       const price = bestPrice(byProduct[prod.productId] || []);
       if (price == null) continue;
       (cards[normNum(num)] ||= []).push([setIdx, normName(prod.name), price]);
       ids[prod.productId] = price;
       count++;
     }
+    await writeFile(`sets/${g.groupId}.json`, JSON.stringify({ id: g.groupId, name: g.name, cards: list }));
   }
 }
 await Promise.all([worker(), worker(), worker(), worker()]);
 
+if (ONLY.length){ console.log(`Updated set lists for ${groups.map(g => g.name).join(", ")}`); process.exit(0); }
 if (count < 1000) throw new Error(`Only ${count} priced cards found; refusing to overwrite prices.json`);
 await writeFile("prices.json", JSON.stringify({ updated: new Date().toISOString(), sets, cards, ids }));
 console.log(`Wrote prices.json with ${count} priced cards from ${sets.length} sets`);

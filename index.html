@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PYB’s Pokémon TCG Collection</title>
+<title>PYB’s TCG Collection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -240,7 +240,7 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
     <a class="btn light" href="./" id="ownBinder">Open my own binder</a>
   </div>
   <header>
-    <h1>PYB’s Pokémon TCG Collection</h1>
+    <h1>PYB’s TCG Collection</h1>
     <nav class="cats" id="cats" aria-label="Category"></nav>
     <form class="add" id="addForm">
       <input id="artistInput" list="artistList" placeholder="Add an artist…" autocomplete="off" aria-label="Artist name">
@@ -1376,7 +1376,7 @@ $("copyShare").addEventListener("click", async () => {
   $("copyShare").textContent = "Copied!";
 });
 $("nativeShare").addEventListener("click", () => {
-  navigator.share({ title: "PYB’s Pokémon TCG Collection", url: $("shareUrl").value }).catch(() => {});
+  navigator.share({ title: "PYB’s TCG Collection", url: $("shareUrl").value }).catch(() => {});
 });
 $("closeShare").addEventListener("click", () => $("shareDlg").close());
 addEventListener("hashchange", () => location.reload());
@@ -1397,7 +1397,7 @@ async function openShared(code){
   document.body.classList.add("view-only");
   $("viewing").hidden = false;
   if (d.d) $("viewingDate").textContent = " (as of " + new Date(d.d + "T12:00").toLocaleDateString() + ")";
-  document.title = "PYB’s Pokémon TCG Collection (shared)";
+  document.title = "PYB’s TCG Collection (shared)";
 }
 
 // Start
