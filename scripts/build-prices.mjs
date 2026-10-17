@@ -39,6 +39,17 @@ function bestPrice(rows) {
   return Math.round((p.marketPrice || p.midPrice) * 100) / 100;
 }
 
+// TCGCSV asks not to fetch the same prices more than once a day: skip if prices.json is under 20 hours old
+// (set FORCE_PRICES=1 to override).
+try {
+  const prev = JSON.parse(await (await import("node:fs/promises")).readFile("prices.json", "utf8"));
+  const ageHours = (Date.now() - Date.parse(prev.updated)) / 3600000;
+  if (ageHours < 20 && !process.env.FORCE_PRICES){
+    console.log(`prices.json is only ${ageHours.toFixed(1)} hours old; not downloading again today.`);
+    process.exit(0);
+  }
+} catch(e){ /* no previous file: download */ }
+
 const groups = await getJSON(`${BASE}/${CATEGORY}/groups`);
 console.log(`${groups.length} groups`);
 
