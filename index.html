@@ -11,13 +11,14 @@
 :root{
   --desk:#DCE3EC; --page:#F7F9FC; --ink:#1C2433; --muted:#5B6577; --line:#C6CFDB;
   --cover:#2B3A55; --cover-ink:#F2F5FA; --accent:#1F7A8C; --gold:#D99A1E; --danger:#B2412F;
+  --chart:#B57F12;
   --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --gutter:clamp(1rem,4vw,2.5rem);
 }
 @media (prefers-color-scheme: dark){
   :root{ --desk:#141A24; --page:#1D2532; --ink:#E6EBF2; --muted:#9AA6B8; --line:#344055;
-    --cover:#0F1622; --cover-ink:#E6EBF2; --accent:#4FB3C6; --gold:#F0B743; --danger:#E0715E; }
+    --cover:#0F1622; --cover-ink:#E6EBF2; --accent:#4FB3C6; --gold:#F0B743; --danger:#E0715E; --chart:#BC8722; }
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--desk);color:var(--ink);font:16px/1.5 var(--body)}
@@ -130,6 +131,39 @@ button.total.on strong{color:#1C2433}
 .which{display:block;font-size:.8rem;margin-top:.35rem;color:var(--muted)}
 .which select{width:100%;margin-top:.15rem;font-size:.85rem;padding:.2rem;border-radius:6px;border:1px solid var(--line);background:var(--page)}
 .meta .remove{border:0;background:none;padding:.2rem 0 0;color:var(--muted);text-decoration:underline;font-size:.78rem;cursor:pointer}
+dialog.pricedlg{max-width:min(94vw,760px);width:100%;background:var(--page);color:var(--ink);border-radius:14px;padding:1rem 1.1rem}
+.pd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.pd-head h3{font:800 1.3rem/1.2 var(--display);margin:0}
+.pd-head p{margin:.15rem 0 0;color:var(--muted);font-size:.9rem}
+.pd-x{border:0;background:none;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--muted);width:auto;margin:0}
+.pd-body{display:flex;gap:1.1rem;margin-top:.8rem;align-items:flex-start}
+#pdImg{width:150px;border-radius:8px;cursor:zoom-in;flex:none}
+.pd-main{flex:1;min-width:0}
+.pd-now{display:flex;flex-wrap:wrap;align-items:baseline;gap:.35rem .8rem}
+.pd-price{font:800 1.9rem/1 var(--display)}
+.pd-change{color:var(--muted);font-size:.9rem}
+.pd-ranges{margin:.6rem 0 .4rem}
+.pd-ranges button{width:auto;margin:0}
+.pd-chart{position:relative}
+.pd-chart svg{width:100%;height:auto;display:block;touch-action:none}
+.pd-grid{stroke:var(--line);stroke-width:1}
+.pd-axis{fill:var(--muted);font:12px var(--body)}
+.pd-line{fill:none;stroke:var(--chart);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.pd-area{fill:var(--chart);opacity:.1}
+.pd-dot{fill:var(--chart);stroke:var(--page);stroke-width:2}
+.pd-cross{stroke:var(--muted);stroke-width:1}
+.pd-hit{fill:transparent;cursor:crosshair}
+.pd-tip{position:absolute;transform:translate(-50%,-100%);background:var(--ink);color:var(--page);padding:.3rem .55rem;border-radius:8px;font-size:.8rem;pointer-events:none;white-space:nowrap;display:flex;gap:.5rem}
+.pd-empty{color:var(--muted);padding:1.5rem 0}
+.pd-note{color:var(--muted);font-size:.8rem;margin:.35rem 0 0}
+.pd-note b{color:var(--ink)}
+.pd-foot{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:.9rem;flex-wrap:wrap}
+.pd-foot .btn{width:auto;margin:0}
+#pdMissing{border:0;background:none;padding:.2rem 0;color:var(--muted);text-decoration:underline;font-size:.85rem;cursor:pointer}
+#pdMissing:hover{color:var(--danger)}
+@media (max-width:640px){ .pd-body{flex-direction:column} #pdImg{width:110px} }
+.undo-bar{position:fixed;left:50%;bottom:1.25rem;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:1rem;
+  background:var(--ink);color:var(--page);padding:.6rem .7rem .6rem 1rem;border-radius:12px;box-shadow:0 8px 24px rgba(10,14,22,.35);max-width:calc(100vw - 2rem)}
 .meta .rank{display:inline;color:var(--gold);font-family:var(--display);font-weight:800}
 .viewing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem 1rem;
   padding:.4rem var(--gutter);background:var(--gold);color:#1C2433;font-weight:700;font-size:.9rem}
@@ -157,8 +191,8 @@ footer{padding:1rem var(--gutter) 2rem;color:var(--muted);font-size:.9rem}
 
 dialog{border:0;padding:0;background:none;max-width:min(92vw,520px)}
 dialog::backdrop{background:rgba(10,14,22,.8)}
-dialog img{width:100%;border-radius:14px;display:block}
-dialog button{margin-top:.75rem;width:100%}
+#zoomDlg img{width:100%;border-radius:14px;display:block}
+#zoomDlg button{margin-top:.75rem;width:100%}
 
 @media (max-width:1400px){ .total .lbl{display:none} }
 @media (max-width:640px){
@@ -232,6 +266,21 @@ dialog button{margin-top:.75rem;width:100%}
     <button class="btn light-dark" id="closeShare">Close</button>
   </div>
   <p class="hint">This is a snapshot of right now. If you mark more cards later, click Share again for a fresh link.</p>
+</dialog>
+<div class="undo-bar" id="undoBar" role="status" hidden><span></span><button class="btn">Undo</button></div>
+<dialog id="priceDlg" class="pricedlg" aria-labelledby="pdName">
+  <div class="pd-head"><div><h3 id="pdName"></h3><p id="pdSub"></p></div><button class="pd-x" id="pdClose" aria-label="Close">×</button></div>
+  <div class="pd-body">
+    <img id="pdImg" alt="" title="Click to enlarge" onerror="this.hidden=true">
+    <div class="pd-main">
+      <div class="pd-now"><span class="pd-price" id="pdNow"></span><span class="pd-change" id="pdChange"></span></div>
+      <div class="seg pd-ranges" id="pdRanges" role="group" aria-label="Time range"></div>
+      <div class="pd-chart" id="pdChart"></div>
+      <p class="pd-note" id="pdNote"></p>
+      <p class="pd-note" id="pdCm"></p>
+    </div>
+  </div>
+  <div class="pd-foot"><button id="pdMissing">I don’t have this card (mark as missing)</button><button class="btn" onclick="this.closest('dialog').close()">Close</button></div>
 </dialog>
 <dialog id="zoomDlg"><img id="zoomImg" alt=""><button class="btn" id="zoomClose">Close</button></dialog>
 
@@ -544,7 +593,8 @@ function keepDetails(lang, d, id = d.id){
   const main = ["holo", "normal", "reverse"].map(t => plain.find(x => x.type === t)).find(Boolean) || plain[0];
   const tp = main?.thirdParty?.tcgplayer;
   state.details[k] = { r: d.rarity || "", s: d.set?.name || "" };
-  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(tp ? { tp } : {}), ...(Object.keys(v).length ? { v } : {}) };
+  const cmk = d.pricing?.cardmarket, cm = cmk && (cmk.avg1 || cmk.avg7 || cmk.avg30) ? { a1: cmk.avg1, a7: cmk.avg7, a30: cmk.avg30 } : null;
+  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(tp ? { tp } : {}), ...(cm ? { cm } : {}), ...(Object.keys(v).length ? { v } : {}) };
 }
 
 // ----- Full Arts helpers -----
@@ -885,7 +935,8 @@ function addFullArt(c, d, version, several){
 function removeFullArt(k){
   const i = state.fullArts.findIndex(e => ckey(e.lang, e.id) === k); if (i < 0) return;
   if (!confirm(`Remove ${state.fullArts[i].name} from Full Arts? (It stays marked as owned in your other categories.)`)) return;
-  state.fullArts.splice(i, 1); save(); renderPicker(); render();
+  const [gone] = state.fullArts.splice(i, 1); save(); renderPicker(); render();
+  showUndo(`${gone.name} removed from Full Arts.`, () => { state.fullArts.splice(i, 0, gone); save(); render(); });
 }
 document.addEventListener("click", e => {
   if (e.target.closest("[data-picker-close]")){ picker.q = ""; renderPicker(); return; }
@@ -985,15 +1036,120 @@ function onPageClick(e){
   const z = e.target.closest("[data-zoom]");
   if (z){ $("zoomImg").src = z.dataset.zoom; $("zoomDlg").showModal(); return; }
   const t = e.target.closest(".toggle");
-  if (t && !viewOnly){
-    const a = activeList(), li = t.closest(".pocket"), k = ckey(li.dataset.lang || a.lang, li.dataset.id);
-    if (state.owned[k]) delete state.owned[k]; else state.owned[k] = true;
-    const own = !!state.owned[k];
-    li.classList.toggle("owned", own); t.setAttribute("aria-pressed", own);
-    li.querySelector(".tag").textContent = own ? "Owned" : "Missing";
+  if (t){
+    const a = activeList(), li = t.closest(".pocket"), lang = li.dataset.lang || a.lang, k = ckey(lang, li.dataset.id);
+    // A card you own opens its price history (unmarking lives in there); a missing card becomes owned.
+    if (state.owned[k] || viewOnly){
+      const c = (cardsOf(a) || []).find(x => x.id === li.dataset.id && cardLang(a, x) === lang);
+      if (c) openPriceHistory(a, c);
+      return;
+    }
+    state.owned[k] = true;
+    li.classList.add("owned"); t.setAttribute("aria-pressed", true);
+    li.querySelector(".tag").textContent = "Owned";
     save(); renderProgress(a);
-    if (ui.view !== "all" || a.kind === "top") setTimeout(renderGrid, 250);
+    if (ui.view !== "all") setTimeout(renderGrid, 250);
   }
+}
+
+// ----- Price history pop-up -----
+// TCGplayer market price per day, from history/NNN.json (built daily by scripts/build-history.mjs).
+const RANGES = [["1W", 7], ["1M", 30], ["3M", 91], ["6M", 182], ["1Y", 365], ["All", Infinity]];
+const histCache = {};
+const ph = { a: null, c: null, k: "", range: "1M", series: null };
+async function loadHistory(tp){
+  const shard = String(tp % 1000).padStart(3, "0");
+  histCache[shard] ||= fetch(`history/${shard}.json`).then(r => r.ok ? r.json() : null).catch(() => null);
+  const s = await histCache[shard];
+  const arr = s?.p?.[tp]; if (!arr) return null;
+  const start = Date.parse(s.start + "T00:00:00Z");
+  return arr.map((v, i) => ({ t: start + i * 86400000, v })).filter(x => x.v != null);
+}
+async function openPriceHistory(a, c){
+  const L = cardLang(a, c), k = ckey(L, c.id), fa = faEntry(k), pr = state.prices[k];
+  Object.assign(ph, { a, c, k, series: null });
+  const pic = cardImages(c, L), d = state.details[k] || {};
+  $("pdName").textContent = c.name;
+  $("pdSub").textContent = [setName(a, c) + (c.num ? " #" + c.num : ""), fa?.vlabel || c.vlabel || d.r].filter(Boolean).join(" · ");
+  $("pdImg").hidden = !pic; if (pic){ $("pdImg").src = pic.small; $("pdImg").dataset.zoom = pic.large; }
+  $("pdMissing").hidden = viewOnly;
+  const cm = pr?.cm;
+  $("pdCm").innerHTML = cm ? `<strong>Cardmarket (Europe)</strong> average sale: ${[["1 day", cm.a1], ["7 days", cm.a7], ["30 days", cm.a30]]
+    .filter(x => x[1] > 0).map(([l, v]) => `${l} <b>${money(v, "EUR")}</b>`).join(" · ")}` : "";
+  $("priceDlg").showModal();
+  const tp = fa?.tp || pr?.tp;
+  ph.series = tp ? await loadHistory(tp) : [];
+  if (ph.k === k) drawPriceHistory();
+}
+function drawPriceHistory(){
+  const now = priceOf(ph.a, ph.c)?.p, all = ph.series || [];
+  $("pdNow").textContent = now ? money(now.v, now.c) : "No price yet";
+  $("pdRanges").innerHTML = RANGES.map(([r]) => `<button data-range="${r}" aria-pressed="${ph.range === r}">${r}</button>`).join("");
+  const days = RANGES.find(x => x[0] === ph.range)[1], end = all.length ? all[all.length - 1].t : 0;
+  const pts = all.filter(p => end - p.t < days * 86400000);
+  const since = all.length ? new Date(all[0].t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
+  if (pts.length < 2){
+    $("pdChange").textContent = "";
+    $("pdChart").innerHTML = `<p class="pd-empty">${!ph.series?.length
+      ? "There’s no TCGplayer price history for this card yet (it isn’t linked to a TCGplayer listing)."
+      : `Not enough history yet. Daily prices have been collected since ${since}; check back in a few days.`}</p>`;
+    $("pdNote").textContent = "";
+    return;
+  }
+  const first = pts[0].v, last = pts[pts.length - 1].v, diff = last - first, pct = first ? diff / first * 100 : 0;
+  $("pdChange").textContent = `${diff >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(diff), "USD")} (${diff >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%) over ${ph.range === "All" ? "all history" : ph.range}`;
+  $("pdNote").textContent = `TCGplayer market price, one point per day.` + (end - all[0].t < days * 86400000 && ph.range !== "All" ? ` History starts ${since}, so this shows everything so far.` : "");
+  // --- chart ---
+  const W = 600, H = 220, padL = 56, padR = 14, padT = 12, padB = 26;
+  const lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
+  const span = hi - lo || hi * .1 || 1, yMin = Math.max(0, lo - span * .15), yMax = hi + span * .15;
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  const X = t => padL + (t1 === t0 ? .5 : (t - t0) / (t1 - t0)) * (W - padL - padR);
+  const Y = v => padT + (1 - (v - yMin) / (yMax - yMin)) * (H - padT - padB);
+  const ticks = [0, .5, 1].map(f => yMin + f * (yMax - yMin));
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");
+  const area = line + `L${X(t1).toFixed(1)},${Y(yMin)}L${X(t0).toFixed(1)},${Y(yMin)}Z`;
+  const fmtDate = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  $("pdChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Price history chart">
+    ${ticks.map(v => `<line class="pd-grid" x1="${padL}" x2="${W - padR}" y1="${Y(v)}" y2="${Y(v)}"/><text class="pd-axis" x="${padL - 8}" y="${Y(v) + 4}" text-anchor="end">${money(v, "USD").replace(/\.\d\d$/, v < 10 ? (money(v, "USD").match(/\.\d\d$/) || [""])[0] : "")}</text>`).join("")}
+    <text class="pd-axis" x="${padL}" y="${H - 6}">${fmtDate(t0)}</text>
+    <text class="pd-axis" x="${W - padR}" y="${H - 6}" text-anchor="end">${fmtDate(t1)}</text>
+    <path class="pd-area" d="${area}"/><path class="pd-line" d="${line}"/>
+    <circle class="pd-dot" cx="${X(t1)}" cy="${Y(last)}" r="4.5"/>
+    <g class="pd-hover" hidden><line class="pd-cross" y1="${padT}" y2="${H - padB}"/><circle class="pd-dot" r="4.5"/></g>
+    <rect class="pd-hit" x="${padL}" y="0" width="${W - padL - padR}" height="${H}"/>
+  </svg><div class="pd-tip" hidden></div>`;
+  const svg = $("pdChart").querySelector("svg"), hov = svg.querySelector(".pd-hover"), tip = $("pdChart").querySelector(".pd-tip");
+  const move = ev => {
+    const r = svg.getBoundingClientRect(), x = ((ev.touches?.[0] || ev).clientX - r.left) / r.width * W;
+    const p = pts.reduce((b, q) => Math.abs(X(q.t) - x) < Math.abs(X(b.t) - x) ? q : b);
+    hov.hidden = false; hov.querySelector("line").setAttribute("x1", X(p.t)); hov.querySelector("line").setAttribute("x2", X(p.t));
+    hov.querySelector("circle").setAttribute("cx", X(p.t)); hov.querySelector("circle").setAttribute("cy", Y(p.v));
+    tip.hidden = false; tip.innerHTML = `<b>${money(p.v, "USD")}</b><span>${fmtDate(p.t)}</span>`;
+    const px = X(p.t) / W * r.width; tip.style.left = Math.min(Math.max(px, 50), r.width - 50) + "px"; tip.style.top = (Y(p.v) / H * r.height - 8) + "px";
+  };
+  const leave = () => { hov.hidden = true; tip.hidden = true; };
+  svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move); svg.addEventListener("pointerleave", leave);
+}
+$("pdRanges").addEventListener("click", e => { const b = e.target.closest("[data-range]"); if (b){ ph.range = b.dataset.range; drawPriceHistory(); } });
+$("pdClose").addEventListener("click", () => $("priceDlg").close());
+$("priceDlg").addEventListener("click", e => { if (e.target === $("priceDlg")) $("priceDlg").close(); });
+$("pdImg").addEventListener("click", () => { $("zoomImg").src = $("pdImg").dataset.zoom; $("zoomDlg").showModal(); });
+$("pdMissing").addEventListener("click", () => {
+  const { k, c } = ph; $("priceDlg").close();
+  delete state.owned[k]; save(); render();
+  showUndo(`${c.name} marked as missing.`, () => { state.owned[k] = true; save(); render(); });
+});
+
+// A small message at the bottom with an Undo button, shown for 8 seconds.
+let undoTimer;
+function showUndo(text, undo){
+  const bar = $("undoBar");
+  bar.querySelector("span").textContent = text;
+  bar.hidden = false;
+  bar.querySelector("button").onclick = () => { clearTimeout(undoTimer); bar.hidden = true; undo(); };
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => bar.hidden = true, 8000);
 }
 $("main").addEventListener("click", onPageClick);
 $("toolbar").addEventListener("click", onPageClick);

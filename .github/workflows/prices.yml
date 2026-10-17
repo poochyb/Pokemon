@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: node scripts/build-prices.mjs
       - run: node scripts/build-history.mjs
       - name: Commit prices.json and price history if they changed
@@ -29,4 +29,6 @@ jobs:
           git add prices.json history
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
           git commit -m "Update TCGplayer prices"
-          git push
+          # If another run saved first, rebuild on top of it instead of failing.
+          for i in 1 2 3; do git push && exit 0; git pull --rebase -X theirs || { git rebase --abort; git reset --hard origin/$GITHUB_REF_NAME; exit 0; }; done
+          exit 1

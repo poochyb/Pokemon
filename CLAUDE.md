@@ -15,6 +15,9 @@ The owner is new to coding. Explain things in plain language and give click-by-c
 - Card lists are cached in localStorage (`artistBinder.lists.v1`, separate from user data). If TCGdex fails (it has short outages, e.g. HTTP 503 "no available server"), `useSaved()` shows the saved copy with a note and retries every minute; never-loaded lists show an error and keep retrying.
 - TCGdex also returns Pokémon TCG Pocket (phone game) cards (`/tcgp/` images, set ids like `A4`, `B2`, `P-A`); `isPhysical()` drops them from every list.
 
+- Clicking a card: missing → becomes owned (one click). Owned (or any card in a shared view) → **price history pop-up** (`#priceDlg`): today's price, change over a range (1W/1M/3M/6M/1Y/All), an SVG line chart with hover tooltip, and Cardmarket 1/7/30-day averages (`state.prices[k].cm`). Unmarking is the "I don't have this card" link inside it; unmarking and removing from Full Arts show an 8-second Undo bar (`showUndo`).
+- Price history: `history/NNN.json` (NNN = TCGplayer productId % 1000, `{start, p: {productId: [one price per day]}}`), built daily by `scripts/build-history.mjs` from our own prices.json snapshots (backfilled from git history; starts 2026-10-10). TCGCSV's public archive is offline (HTTP 403), so there is no older history. Chart colors: `--chart` #B57F12 light / #BC8722 dark (validated with the dataviz palette script).
+
 ## Publishing
 - Live site via GitHub Pages: https://poochyb.github.io/Pokemon/ (Artist Binder) and /collection.html.
 - Pages serves the branch `claude/pokemon-tcg-collection-ws1czw` (also the repo's default branch). Changes only go live once they are on that branch.
@@ -27,5 +30,5 @@ The owner is new to coding. Explain things in plain language and give click-by-c
 ## Prices
 - Price order in `priceOf`: (1) a Full Arts entry's chosen version `tp` → `prices.json` `ids`; (2) the card's main TCGplayer listing (`state.prices[k].tp`, from TCGdex `variants_detailed[].thirdParty.tcgplayer`: holo > normal > reverse, unstamped, standard size) → `ids` (fresh daily; TCGdex's own TCGplayer copy can be days old); (3) TCGdex `pricing` (TCGplayer USD, else Cardmarket EUR; often `null`); (4) name/number matching below.
 - Fallback for English cards: `prices.json`, built daily by `.github/workflows/prices.yml` running `scripts/build-prices.mjs`, which downloads TCGplayer prices from TCGCSV (https://tcgcsv.com, category 3). It also writes `ids` (TCGplayer productId → price) for exact versions. The app matches by normalized card number + name, then best set-name overlap. Keep `normNum`/`normName` identical in both files.
-- The workflow commits `prices.json` to the branch daily, so always `git pull` before pushing.
+- The workflow commits `prices.json` to the branch daily, so always `git pull` before pushing. It skips the TCGCSV download if prices.json is under 20 hours old (TCGCSV asks for at most one fetch per day; `FORCE_PRICES=1` overrides) and rebases on top of a newer push instead of failing.
 - Japanese cards aren't covered by the fallback yet (TCGplayer category 85 uses English names; TCGdex `ja` names are Japanese).
