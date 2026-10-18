@@ -12,6 +12,9 @@ on:
       max_chars:
         description: "How many characters of each response to print"
         default: "3000"
+      jq:
+        description: "Optional jq filter applied to each JSON response (prints its output instead of the raw text)"
+        default: ""
 
 permissions:
   contents: read
@@ -24,10 +27,16 @@ jobs:
         env:
           PATHS: ${{ inputs.paths }}
           MAX: ${{ inputs.max_chars }}
+          JQ: ${{ inputs.jq }}
         run: |
           set -f  # keep * and ? in paths literal
           for p in $PATHS; do
             case "$p" in /v2/*) url="https://api.tcgdex.net$p";; https://*) url="$p";; *) echo "skipping $p"; continue;; esac
+            if [ -n "$JQ" ]; then
+              curl -sS -m 30 "$url" -o /tmp/out.txt || true
+              jq -r "$JQ" /tmp/out.txt 2>/dev/null || echo "$p	(no JSON: $(head -c 100 /tmp/out.txt))"
+              continue
+            fi
             echo "===== $url"
             curl -sS -m 30 -w '\n[HTTP %{http_code}, %{size_download} bytes, %{content_type}]\n' "$url" -o /tmp/out.txt || true
             case "$(file -b --mime-type /tmp/out.txt)" in image/*) echo "(image file)"; continue;; esac
