@@ -186,6 +186,9 @@ dialog.pricedlg{max-width:min(94vw,760px);width:100%;background:var(--page);colo
 .pd-foot .btn{width:auto;margin:0}
 #pdMissing{border:0;background:none;padding:.2rem 0;color:var(--muted);text-decoration:underline;font-size:.85rem;cursor:pointer}
 #pdMissing:hover{color:var(--danger)}
+.pd-ver{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .6rem;margin:.1rem 0 .55rem;font-size:.9rem}
+.pd-ver select{padding:.3rem .5rem;border:1px solid var(--line);border-radius:8px;background:var(--page);max-width:100%}
+.pd-ver small{color:var(--muted)}
 @media (max-width:640px){ .pd-body{flex-direction:column} #pdImg{width:110px} }
 .undo-bar{position:fixed;left:50%;bottom:1.25rem;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:1rem;
   background:var(--ink);color:var(--page);padding:.6rem .7rem .6rem 1rem;border-radius:12px;box-shadow:0 8px 24px rgba(10,14,22,.35);max-width:calc(100vw - 2rem)}
@@ -202,6 +205,13 @@ dialog.share .hint{color:var(--muted);font-size:.85rem;margin:.7rem 0 0}
 #shareUrl{width:100%;padding:.45rem .6rem;border:1px solid var(--line);border-radius:8px;background:var(--desk);font-size:.85rem}
 .share-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
 .share-actions button{width:auto;margin:0}
+.share-actions a.btn{width:auto;margin:0;text-decoration:none;display:inline-flex;align-items:center}
+dialog.share ol{margin:.2rem 0 .7rem;padding-left:1.3rem}
+dialog.share li{margin:.25rem 0}
+dialog.share a{color:inherit}
+#cloudToken{width:100%;padding:.45rem .6rem;border:1px solid var(--line);border-radius:8px;background:var(--desk);font:inherit;font-size:.9rem}
+.cloud-status{border:0;background:none;color:var(--muted);font-size:.85rem;cursor:pointer;padding:.2rem .2rem;text-decoration:underline;text-decoration-color:var(--line)}
+.cloud-status.bad{color:var(--danger)}
 .btn.light-dark{background:var(--line);color:var(--ink);font-weight:400}
 .menu > summary{list-style:none}
 .menu > summary::-webkit-details-marker{display:none}
@@ -275,11 +285,13 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
       <div class="menu-list">
         <button id="exportBtn">Save backup</button>
         <button id="importBtn">Restore backup</button>
+        <button id="cloudBtn">Cloud backup…</button>
       </div>
       <input type="file" id="importFile" accept="application/json" hidden>
     </details>
+    <button class="cloud-status" id="cloudStatus" hidden></button>
   </div>
-  Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars (via TCGdex, or TCGCSV’s daily TCGplayer data when TCGdex has none); cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved automatically in this browser; use Backup (above) to keep a copy, or Share to show your collection on another device.</footer>
+  Card data, images and prices from TCGdex. Prices are TCGplayer market prices in US dollars (via TCGdex, or TCGCSV’s daily TCGplayer data when TCGdex has none); cards TCGplayer doesn’t list show the Cardmarket trend price in euros. Prices refresh once a day. Your checkmarks are saved automatically in this browser. Turn on Backup ▾ → Cloud backup to keep them safe in your GitHub account and use them on your other devices, or use Share to show your collection to someone.</footer>
 
 <dialog id="shareDlg" class="share">
   <h3>Share your collection</h3>
@@ -292,12 +304,34 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
   </div>
   <p class="hint">This is a snapshot of right now. If you mark more cards later, click Share again for a fresh link.</p>
 </dialog>
+<dialog id="cloudDlg" class="share" aria-labelledby="cloudTitle">
+  <h3 id="cloudTitle">Cloud backup</h3>
+  <div id="cloudOff">
+    <p>Save your collection to your GitHub account automatically, every time you change something. It stays safe if this browser’s data is cleared, and your phone and computer can share the same collection. Every save is kept, so older versions can be recovered.</p>
+    <p><strong>One-time setup (about 2 minutes):</strong></p>
+    <ol>
+      <li>Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=PYB%E2%80%99s%20TCG%20Collection" target="_blank" rel="noopener">GitHub’s “New token” page</a> (sign in if asked). The name and the <b>gist</b> box are already filled in.</li>
+      <li>Under <b>Expiration</b>, choose <b>No expiration</b> (or pick a date; you’ll repeat this setup when it runs out).</li>
+      <li>Scroll to the bottom and click <b>Generate token</b>.</li>
+      <li>Copy the token (it starts with <b>ghp_</b>) and paste it here:</li>
+    </ol>
+    <input id="cloudToken" placeholder="ghp_…" autocomplete="off" spellcheck="false" aria-label="GitHub token">
+    <div class="share-actions"><button class="btn" id="cloudConnect">Turn on cloud backup</button><button class="btn light-dark" data-close-dlg>Close</button></div>
+    <p class="hint" id="cloudMsg">The token only lets this app create and update gists (small notes in your GitHub account). It’s kept in this browser only. Your backup is a <em>secret</em> gist: it isn’t listed or searchable, but anyone with its exact link could open it (it holds the same information as your Share link).</p>
+  </div>
+  <div id="cloudOn" hidden>
+    <p id="cloudInfo"></p>
+    <div class="share-actions"><button class="btn" id="cloudNow">Save now</button><a class="btn light-dark" id="cloudHistory" target="_blank" rel="noopener">Older versions</a><button class="btn light-dark" id="cloudOffBtn">Turn off on this device</button><button class="btn light-dark" data-close-dlg>Close</button></div>
+    <p class="hint">On another device (like your phone): open this site there, choose <b>Backup ▾ → Cloud backup…</b>, and paste the same token (or make a new one the same way). To bring back an older version: open <b>Older versions</b>, find the one you want, click <b>Raw</b>, save that page as a file, then use <b>Backup ▾ → Restore backup</b>.</p>
+  </div>
+</dialog>
 <div class="undo-bar" id="undoBar" role="status" hidden><span></span><button class="btn">Undo</button></div>
 <dialog id="priceDlg" class="pricedlg" aria-labelledby="pdName">
   <div class="pd-head"><div><h3 id="pdName"></h3><p id="pdSub"></p></div><button class="pd-x" id="pdClose" aria-label="Close">×</button></div>
   <div class="pd-body">
     <img id="pdImg" alt="" title="Click to enlarge" onerror="this.hidden=true">
     <div class="pd-main">
+      <label class="pd-ver" id="pdVerRow" hidden><span>Your version:</span><select id="pdVer"></select><small id="pdVerNote"></small></label>
       <div class="pd-now"><span class="pd-price" id="pdNow"></span><span class="pd-change" id="pdChange"></span></div>
       <div class="seg pd-ranges" id="pdRanges" role="group" aria-label="Time range"></div>
       <div class="pd-chart" id="pdChart"></div>
@@ -352,7 +386,7 @@ function useSaved(a, k, msg){
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
 let saveTimer;
 let viewOnly = false; // true when showing someone's shared link; never saves anything
-function save(){ if (viewOnly) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }, 150); }
+function save(){ if (viewOnly) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} cloudSoon(); }, 150); }
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const akey = a => a.lang + "|" + a.name;
 // Categories: "artists" (one sub-tab per artist) and "ex" (EX / Mega EX cards, with sub-tabs).
@@ -361,6 +395,9 @@ const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
 // Each entry keeps the card's basics so it shows even offline, plus the chosen version (vid/vlabel/tp).
 const FA_LIST = { kind: "fa", name: "Full Arts", lang: "en" };
 state.fullArts = state.fullArts || [];
+// Which version (regular, reverse holo, 1st edition…) the owner has of a card, by card key → TCGdex variantId.
+// Full Arts entries keep their own choice (vid/vlabel/tp) instead.
+state.versions = state.versions || {};
 if (state.cat === "sir") state.cat = "fa"; // the old automatic S.I.R. category became Full Arts
 delete state.sirSub;
 // Most valuable: every owned card from all categories, ranked by price (opened by clicking the binder total).
@@ -440,7 +477,7 @@ function pickPrice(pricing){
       const p = tp[v];
       if (!p || typeof p !== "object") continue;
       const val = p.marketPrice || p.midPrice;
-      if (val > 0) return { v: val, c: "USD" };
+      if (val > 0) return { v: val, c: "USD", ...(v === "reverse-holofoil" ? { rev: 1 } : {}) }; // rev: only a reverse-holo price was known
     }
   }
   const cm = pricing?.cardmarket;
@@ -456,14 +493,48 @@ const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toLocaleString("en-US", 
 // prices.json: TCGplayer prices downloaded daily by a GitHub Action (scripts/build-prices.mjs).
 function priceOf(a, c){
   if (c.pid && "price" in c) return { p: c.price != null ? { v: c.price, c: "USD" } : null, t: Date.now() }; // master-set printing: today's TCGplayer price
-  const k = ckey(cardLang(a, c), c.id), fa = faEntry(k);
-  if (fa?.tp && tcgp?.ids?.[fa.tp] != null) return { p: { v: tcgp.ids[fa.tp], c: "USD" }, t: Date.now() }; // exact TCGplayer version
-  if (fa?.vid && state.prices[k]?.v?.[fa.vid]?.c === "USD") return { p: state.prices[k].v[fa.vid], t: state.prices[k].t };
-  const pr = state.prices[k];
-  if (pr?.tp && tcgp?.ids?.[pr.tp] != null) return { p: { v: tcgp.ids[pr.tp], c: "USD" }, t: pr.t }; // today's TCGplayer price
-  if (!pr || pr.p?.c === "USD" || cardLang(a, c) !== "en") return pr;
-  const v = tcgplayerPrice(c, setName(a, c));
+  const k = ckey(cardLang(a, c), c.id), ver = chosenVersion(k), pr = state.prices[k];
+  const vp = ver && versionPrice(k, ver); if (vp) return { p: vp, t: pr?.t || Date.now() }; // the version the owner has
+  const mp = pr?.tp && versionPrice(k, { tp: pr.tp, ty: pr.mt }); // the card's main version, today's TCGplayer price
+  if (mp) return { p: mp, t: pr.t };
+  if (!pr || (pr.p?.c === "USD" && !pr.p.rev) || cardLang(a, c) !== "en") return pr;
+  const v = tcgplayerPrice(c, setName(a, c)); // (a price TCGdex only had for the reverse holo is a last resort)
   return v != null ? { p: { v, c: "USD" }, t: pr.t } : pr;
+}
+
+// ----- Card versions ("Your version" picker) -----
+// The version the owner picked for a card (Full Arts entries first), with its label, TCGplayer product and type.
+function chosenVersion(k){
+  const fa = faEntry(k), vs = state.prices[k]?.vs || [];
+  if (fa?.vid || fa?.tp){ const x = vs.find(v => v.id === fa.vid); return { id: fa.vid, l: fa.vlabel || x?.l, tp: fa.tp || x?.tp, ty: x?.ty }; }
+  const id = state.versions[k]; if (!id) return null;
+  return vs.find(v => v.id === id) || { id };
+}
+// TCGplayer sells some cards in several printings under one product (regular and reverse holo, 1st edition and
+// unlimited). printings/NN.json (NN = productId % 100, built daily) has each printing's price.
+const PRINTING_OF = { normal: ["Normal", "Unlimited"], holo: ["Holofoil", "Unlimited Holofoil"], reverse: ["Reverse Holofoil", "Holofoil"],
+                      firstEdition: ["1st Edition", "1st Edition Holofoil"] };
+const printShards = {};
+function printingsFor(tp){ // the product's printings (null if sold in one printing; undefined while loading)
+  const n = String(tp % 100).padStart(2, "0");
+  if (!(n in printShards)){
+    printShards[n] = undefined;
+    fetch(`printings/${n}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({})).then(d => { printShards[n] = d; render(); if ($("priceDlg").open){ renderVersionPicker(); drawPriceHistory(); } });
+    return undefined;
+  }
+  return printShards[n] === undefined ? undefined : printShards[n][tp] || null;
+}
+function versionPrice(k, ver){
+  if (ver.tp && tcgp?.ids){
+    const names = PRINTING_OF[ver.ty], pp = names ? printingsFor(ver.tp) : null;
+    const hit = pp && names.find(t => pp[t] != null);
+    if (hit) return { v: pp[hit], c: "USD" };
+    // its own TCGplayer product, or (for the main version) the product's usual price while printings/ loads
+    if ((pp === null || !ver.id) && tcgp.ids[ver.tp] != null) return { v: tcgp.ids[ver.tp], c: "USD" };
+  }
+  if (!ver.id) return null;
+  const tv = state.prices[k]?.v?.[ver.id]; // TCGdex's price for that version
+  return tv?.c === "USD" ? tv : null;
 }
 
 // Must match normNum/normName in scripts/build-prices.mjs.
@@ -690,7 +761,9 @@ function keepDetails(lang, d, id = d.id){
   const tp = main?.thirdParty?.tcgplayer;
   state.details[k] = { r: d.rarity || "", s: d.set?.name || "" };
   const cmk = d.pricing?.cardmarket, cm = cmk && (cmk.avg1 || cmk.avg7 || cmk.avg30) ? { a1: cmk.avg1, a7: cmk.avg7, a30: cmk.avg30 } : null;
-  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(tp ? { tp } : {}), ...(cm ? { cm } : {}), ...(Object.keys(v).length ? { v } : {}) };
+  // Every version of the card, for the "Your version" picker: id, label, TCGplayer product and type.
+  const list = vs.length > 1 ? vs.filter(x => x.variantId).map(x => ({ id: x.variantId, l: versionLabel(x), ty: x.type || "", ...(x.thirdParty?.tcgplayer ? { tp: x.thirdParty.tcgplayer } : {}) })) : [];
+  state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(tp ? { tp, mt: main.type || "" } : {}), ...(cm ? { cm } : {}), ...(Object.keys(v).length ? { v } : {}), ...(list.length > 1 ? { vs: list } : {}) };
 }
 
 // ----- Full Arts helpers -----
@@ -963,6 +1036,7 @@ function renderGrid(){
   if (note) st.textContent = "⚠️ " + note + " " + st.textContent;
   $("grid").innerHTML = list.map((c, i) => {
     const own = isOwned(a, c), d = state.details[ckey(cardLang(a, c), c.id)] || {};
+    const vl = c.vlabel || (a.kind !== "ms" && chosenVersion(ckey(cardLang(a, c), c.id))?.l) || "";
     const sn = setName(a, c), pr = priceOf(a, c);
     const priceTxt = !pr ? `<span class="price muted">Price loading…</span>`
       : pr.p ? `<span class="price">${money(pr.p.v, pr.p.c)}</span>` : `<span class="price muted">No price data</span>`;
@@ -974,7 +1048,7 @@ function renderGrid(){
       <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
         <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
       ${pic ? `<button class="zoom" data-zoom="${esc(pic.large)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
-      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${c.vlabel || c.rarity || d.r ? `<span>${esc([c.vlabel, c.rarity || (c.vlabel ? "" : d.r)].filter(Boolean).join(" · "))}</span>` : ""}${priceTxt}${a.kind === "fa" && !viewOnly ? `<button class="remove" data-fa-remove="${esc(ckey(cardLang(a, c), c.id))}">Remove from Full Arts</button>` : ""}</div></li>`;
+      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${vl || c.rarity || d.r ? `<span>${esc([vl, c.rarity || (vl ? "" : d.r)].filter(Boolean).join(" · "))}</span>` : ""}${priceTxt}${a.kind === "fa" && !viewOnly ? `<button class="remove" data-fa-remove="${esc(ckey(cardLang(a, c), c.id))}">Remove from Full Arts</button>` : ""}</div></li>`;
   }).join("");
   renderProgress(a);
   if (a.kind === "top") renderInsights();
@@ -1331,20 +1405,60 @@ async function loadHistory(tp){
   return arr.map((v, i) => ({ t: start + i * 86400000, v })).filter(x => x.v != null);
 }
 async function openPriceHistory(a, c){
-  const L = cardLang(a, c), k = ckey(L, c.id), fa = faEntry(k), pr = state.prices[k];
+  const L = cardLang(a, c), k = ckey(L, c.id), pr = state.prices[k];
   Object.assign(ph, { a, c, k, series: null });
-  const pic = cardImages(c, L), d = state.details[k] || {};
+  const pic = cardImages(c, L);
   $("pdName").textContent = c.name;
-  $("pdSub").textContent = [setName(a, c) + (c.num ? " #" + c.num : ""), fa?.vlabel || c.vlabel || d.r].filter(Boolean).join(" · ");
+  pdSubtitle(); renderVersionPicker();
   $("pdImg").hidden = !pic; if (pic){ $("pdImg").src = pic.small; $("pdImg").dataset.zoom = pic.large; }
   $("pdMissing").hidden = viewOnly;
   const cm = pr?.cm;
   $("pdCm").innerHTML = cm ? `<strong>Cardmarket (Europe)</strong> average sale: ${[["1 day", cm.a1], ["7 days", cm.a7], ["30 days", cm.a30]]
     .filter(x => x[1] > 0).map(([l, v]) => `${l} <b>${money(v, "EUR")}</b>`).join(" · ")}` : "";
   $("priceDlg").showModal();
-  const tp = fa?.tp || c.pid || pr?.tp;
+  await loadSeries();
+}
+function pdSubtitle(){
+  const { a, c, k } = ph, d = state.details[k] || {};
+  $("pdSub").textContent = [setName(a, c) + (c.num ? " #" + c.num : ""), (a.kind !== "ms" && chosenVersion(k)?.l) || c.vlabel || d.r].filter(Boolean).join(" · ");
+}
+async function loadSeries(){
+  const { c, k } = ph, tp = (ph.a.kind !== "ms" && chosenVersion(k)?.tp) || c.pid || state.prices[k]?.tp;
+  ph.series = null;
   ph.series = tp ? await loadHistory(tp) : [];
   if (ph.k === k) drawPriceHistory();
+}
+// "Your version:" menu in the price pop-up, for cards that come in several versions.
+const versionChecked = new Set();
+function renderVersionPicker(){
+  const { a, c, k } = ph, row = $("pdVerRow"), vs = a.kind === "ms" ? [] : state.prices[k]?.vs || [];
+  if (vs.length < 2){
+    row.hidden = true;
+    if (a.kind !== "ms" && !versionChecked.has(k)){ // details saved before versions were kept: look the card up once
+      versionChecked.add(k);
+      getJSON(`${API}/${cardLang(a, c)}/cards/${encodeURIComponent(c.id)}`).then(d => {
+        keepDetails(cardLang(a, c), d, c.id); save();
+        if (ph.k === k && $("priceDlg").open){ renderVersionPicker(); drawPriceHistory(); }
+      }).catch(() => {});
+    }
+    return;
+  }
+  const cur = chosenVersion(k)?.id || "";
+  const opt = (id, label) => `<option value="${esc(id)}"${id === cur ? " selected" : ""}>${esc(label)}</option>`;
+  $("pdVer").innerHTML = opt("", "Not sure (use the most common)") +
+    vs.map(v => { const p = versionPrice(k, v); return opt(v.id, v.l + (p ? " · " + money(p.v, p.c) : "")); }).join("");
+  $("pdVer").disabled = viewOnly;
+  $("pdVerNote").textContent = cur ? "" : "Pick yours for an exact price.";
+  row.hidden = false;
+}
+function setVersion(k, id){
+  const fa = faEntry(k), v = (state.prices[k]?.vs || []).find(x => x.id === id);
+  if (fa){
+    if (v){ fa.vid = v.id; fa.vlabel = v.l; if (v.tp) fa.tp = v.tp; else delete fa.tp; }
+    else { delete fa.vid; delete fa.vlabel; delete fa.tp; }
+  } else if (v) state.versions[k] = v.id;
+  else delete state.versions[k];
+  save(); render();
 }
 function drawPriceHistory(){
   const now = priceOf(ph.a, ph.c)?.p, all = ph.series || [];
@@ -1364,13 +1478,18 @@ function drawPriceHistory(){
   const first = pts[0].v, last = pts[pts.length - 1].v, diff = last - first, pct = first ? diff / first * 100 : 0;
   drawLineChart($("pdChart"), pts);
   $("pdChange").textContent = `${diff >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(diff), "USD")} (${diff >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%) over ${ph.range === "All" ? "all history" : ph.range}`;
-  $("pdNote").textContent = `TCGplayer market price, one point per day.` + (ph.c.multi ? " (The chart follows the card’s main TCGplayer price; other printings like reverse holo can differ.)" : "") + (end - all[0].t < days * 86400000 && ph.range !== "All" ? ` History starts ${since}, so this shows everything so far.` : "");
+  const ver = ph.a.kind !== "ms" && chosenVersion(ph.k), sharedProduct = ver?.tp && printingsFor(ver.tp);
+  $("pdNote").textContent = `TCGplayer market price, one point per day.` + (sharedProduct ? " (The chart follows TCGplayer’s main price for this card; your version’s price today is shown above.)" : "") + (ph.c.multi ? " (The chart follows the card’s main TCGplayer price; other printings like reverse holo can differ.)" : "") + (end - all[0].t < days * 86400000 && ph.range !== "All" ? ` History starts ${since}, so this shows everything so far.` : "");
 }
 let insResize; addEventListener("resize", () => { clearTimeout(insResize); insResize = setTimeout(() => { if (state.cat === "top") renderInsights(); }, 200); });
 document.addEventListener("click", e => {
   const pr = e.target.closest("[data-prange]"); if (pr){ ins.range = pr.dataset.prange; renderInsights(); return; }
   const by = e.target.closest("[data-insby]"); if (by){ ins.by = by.dataset.insby; renderInsights(); return; }
   const more = e.target.closest("[data-ins-more]"); if (more){ ins.showAll[more.dataset.insMore] ^= 1; renderInsights(); }
+});
+$("pdVer").addEventListener("change", e => {
+  if (viewOnly) return;
+  setVersion(ph.k, e.target.value); pdSubtitle(); renderVersionPicker(); loadSeries();
 });
 $("pdRanges").addEventListener("click", e => { const b = e.target.closest("[data-range]"); if (b){ ph.range = b.dataset.range; drawPriceHistory(); } });
 $("pdClose").addEventListener("click", () => $("priceDlg").close());
@@ -1397,8 +1516,21 @@ $("toolbar").addEventListener("click", onPageClick);
 $("zoomClose").addEventListener("click", () => $("zoomDlg").close());
 $("zoomDlg").addEventListener("click", e => { if (e.target === $("zoomDlg")) $("zoomDlg").close(); });
 
+// What a backup holds (the Backup file and the cloud backup use the same format).
+const backupData = () => ({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, masterSets: state.masterSets.map(x => ({ name: x.name, groups: x.groups })), versions: state.versions, owned: state.owned });
+function applyBackup(d){
+  if (!Array.isArray(d?.artists) || !d.owned || typeof d.owned !== "object") throw new Error("not a backup");
+  state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
+  state.pokemon = (d.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
+  state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
+  state.fullArts = Array.isArray(d.fullArts) ? d.fullArts : [];
+  if (Array.isArray(d.masterSets)){ state.masterSets = d.masterSets.map(x => ({ name: x.name, groups: x.groups, lang: "tcgp", kind: "ms" })); state.activeMs = state.masterSets[0] ? mkey(state.masterSets[0]) : null; }
+  state.versions = d.versions && typeof d.versions === "object" ? d.versions : {};
+  state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
+  save(); render(); allLists().forEach(loadArtist);
+}
 $("exportBtn").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, masterSets: state.masterSets.map(x => ({ name: x.name, groups: x.groups })), owned: state.owned }, null, 1)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(backupData(), null, 1)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = `artist-binder-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -1407,15 +1539,7 @@ $("importBtn").addEventListener("click", () => $("importFile").click());
 $("importFile").addEventListener("change", async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
-    const d = JSON.parse(await f.text());
-    if (!Array.isArray(d.artists) || typeof d.owned !== "object") throw new Error();
-    state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
-    state.pokemon = (d.pokemon || []).map(p => ({ name: p.name, lang: p.lang || "en", kind: "poke" }));
-    state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
-    state.fullArts = Array.isArray(d.fullArts) ? d.fullArts : [];
-    if (Array.isArray(d.masterSets)){ state.masterSets = d.masterSets.map(x => ({ name: x.name, groups: x.groups, lang: "tcgp", kind: "ms" })); state.activeMs = state.masterSets[0] ? mkey(state.masterSets[0]) : null; }
-    state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
-    save(); render(); allLists().forEach(loadArtist);
+    applyBackup(JSON.parse(await f.text()));
   } catch(err){ alert("That file isn’t an Artist Binder backup. Choose a file saved with “Save backup”."); }
   e.target.value = "";
 });
@@ -1436,6 +1560,129 @@ function fitTopbar(){
 }
 new ResizeObserver(fitTopbar).observe(topbar);
 addEventListener("resize", fitTopbar);
+
+// ----- Cloud backup -----
+// The backup is kept in a secret gist in the owner's GitHub account, using a token (gist access only) they
+// paste once per device. Every change is saved a few seconds later; GitHub keeps each save as a revision.
+// cloud = { token, gist, user, hash (of the collection last saved or loaded), synced (its savedAt), at, err }
+const CLOUD_KEY = "artistBinder.cloud.v1", GIST_FILE = "pyb-tcg-collection.json";
+let cloud = (() => { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)) || {}; } catch(e){ return {}; } })();
+const keepCloud = () => { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cloud)); } catch(e){} };
+const textHash = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = (h * 33 ^ t.charCodeAt(i)) >>> 0; return h.toString(36) + t.length; };
+const collectionHash = () => textHash(JSON.stringify(backupData()));
+async function gh(path, opts = {}, token = cloud.token){
+  const r = await fetch("https://api.github.com" + path, { ...opts, cache: "no-store",
+    headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token, ...(opts.body ? { "Content-Type": "application/json" } : {}) } });
+  if (!r.ok) throw Object.assign(new Error("GitHub answered " + r.status), { status: r.status });
+  return r.json();
+}
+const gistBody = (d, savedAt) => JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({ ...d, savedAt, app: "PYB’s TCG Collection" }, null, 1) } } });
+async function readGist(){
+  const g = await gh(`/gists/${cloud.gist}`), f = g.files?.[GIST_FILE];
+  if (!f) return null;
+  return JSON.parse(f.truncated ? await (await fetch(f.raw_url, { cache: "no-store" })).text() : f.content);
+}
+const whenText = t => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const cardCount = d => Object.keys(d?.owned || {}).length;
+let cloudBusy = null, cloudAgain = false, cloudTimer;
+function cloudSoon(){ // after a change to the collection itself (not just refreshed prices), save it in 3 seconds
+  if (cloud.gist && !viewOnly && collectionHash() !== cloud.hash){ clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSync, 3000); }
+}
+// Compare this device with the cloud copy: load the cloud copy if only it changed, save this device's if only it
+// changed, and ask if both did (for example, cards marked on the phone while the laptop was offline).
+async function cloudSync(){
+  if (!cloud.gist || viewOnly) return;
+  if (cloudBusy){ cloudAgain = true; return cloudBusy; }
+  clearTimeout(cloudTimer);
+  cloudBusy = (async () => {
+    try {
+      const remote = await readGist();
+      const remoteChanged = remote && remote.savedAt !== cloud.synced, localChanged = collectionHash() !== cloud.hash;
+      let useRemote = remoteChanged && !localChanged;
+      if (remoteChanged && localChanged){
+        useRemote = !cardCount(backupData()) || confirm(`Your cloud backup was changed somewhere else (saved ${whenText(remote.savedAt)}, ${cardCount(remote)} cards), and this device has changes too (${cardCount(backupData())} cards).\n\nOK: use the cloud copy on this device.\nCancel: keep this device’s collection and save it to the cloud.\n\n(Either way, the other copy stays in the cloud backup’s older versions.)`);
+      }
+      if (useRemote && localChanged && cardCount(backupData())){
+        // keep this device's version as an older version in the cloud backup, then go back to the cloud copy
+        const { savedAt, app, ...cloudCopy } = remote, t = Date.now();
+        await gh(`/gists/${cloud.gist}`, { method: "PATCH", body: gistBody(backupData(), t) });
+        await gh(`/gists/${cloud.gist}`, { method: "PATCH", body: gistBody(cloudCopy, t + 1) });
+        remote.savedAt = t + 1;
+      }
+      if (useRemote){
+        applyBackup(remote);
+        Object.assign(cloud, { hash: collectionHash(), synced: remote.savedAt });
+      } else if (localChanged || !remote){
+        const savedAt = Date.now(), h = collectionHash();
+        await gh(`/gists/${cloud.gist}`, { method: "PATCH", body: gistBody(backupData(), savedAt) });
+        Object.assign(cloud, { hash: h, synced: savedAt });
+      }
+      Object.assign(cloud, { at: Date.now(), err: "" });
+    } catch(e){
+      cloud.err = e.status === 401 || e.status === 403 ? "token" : e.status === 404 ? "gone" : "offline";
+      if (cloud.err === "offline") cloudTimer = setTimeout(cloudSync, 60000); // try again in a minute
+    }
+    keepCloud(); renderCloud();
+  })();
+  await cloudBusy; cloudBusy = null;
+  if (cloudAgain){ cloudAgain = false; cloudSync(); }
+}
+async function cloudConnect(token){
+  const me = await gh("/user", {}, token);
+  let gist = null; // reuse the backup made on another device, if there is one
+  for (let page = 1; page <= 10 && !gist; page++){
+    const list = await gh(`/gists?per_page=100&page=${page}`, {}, token);
+    gist = list.find(g => g.files?.[GIST_FILE]);
+    if (list.length < 100) break;
+  }
+  cloud = { token, user: me.login };
+  if (gist) cloud.gist = gist.id;
+  else {
+    const savedAt = Date.now();
+    const g = await gh("/gists", { method: "POST", body: JSON.stringify({ description: "PYB’s TCG Collection backup (saved by the app; please keep it secret)", public: false, ...JSON.parse(gistBody(backupData(), savedAt)) }) }, token);
+    Object.assign(cloud, { gist: g.id, hash: collectionHash(), synced: savedAt, at: savedAt });
+  }
+  keepCloud();
+  await cloudSync();
+}
+function renderCloud(){
+  const on = !!cloud.gist, st = $("cloudStatus");
+  st.hidden = !on || viewOnly;
+  const problem = cloud.err === "token" ? "the GitHub token stopped working. Click to fix."
+    : cloud.err === "gone" ? "the backup gist was deleted. Click to fix."
+    : cloud.err === "offline" ? "couldn’t reach GitHub; will retry." : "";
+  st.classList.toggle("bad", !!problem);
+  st.textContent = "☁️ Cloud backup: " + (problem || (cloud.at ? "saved " + whenText(cloud.at) : "on"));
+  $("cloudOff").hidden = on; $("cloudOn").hidden = !on;
+  if (on){
+    $("cloudInfo").innerHTML = `Cloud backup is <b>on</b> for this device and saves automatically to GitHub user <b>${esc(cloud.user || "")}</b>.` +
+      (problem ? ` <span style="color:var(--danger)">Right now ${esc(problem.replace(" Click to fix.", ""))}.</span>${cloud.err === "offline" ? "" : " Turn it off below and set it up again with a new token."}` : cloud.at ? ` Last checked ${esc(whenText(cloud.at))}.` : "");
+    $("cloudHistory").href = `https://gist.github.com/${encodeURIComponent(cloud.user || "")}/${encodeURIComponent(cloud.gist)}/revisions`;
+  }
+}
+$("cloudBtn").addEventListener("click", () => { renderCloud(); $("cloudMsg").dataset.err = ""; $("cloudDlg").showModal(); });
+$("cloudStatus").addEventListener("click", () => { renderCloud(); $("cloudDlg").showModal(); });
+$("cloudDlg").addEventListener("click", e => { if (e.target.closest("[data-close-dlg]") || e.target === $("cloudDlg")) $("cloudDlg").close(); });
+$("cloudConnect").addEventListener("click", async () => {
+  const token = $("cloudToken").value.trim(), b = $("cloudConnect");
+  if (!token){ $("cloudToken").focus(); return; }
+  b.disabled = true; b.textContent = "Connecting…";
+  try { await cloudConnect(token); $("cloudToken").value = ""; renderCloud(); }
+  catch(e){
+    cloud = {}; keepCloud();
+    alert(e.status === 401 ? "GitHub didn’t accept that token. Check you copied all of it (it starts with ghp_), or make a new one."
+      : e.status === 403 || e.status === 404 ? "That token can’t make gists. Make a new one and be sure the “gist” box is ticked."
+      : "Couldn’t reach GitHub. Check your internet connection and try again.");
+  }
+  b.disabled = false; b.textContent = "Turn on cloud backup";
+});
+$("cloudNow").addEventListener("click", async () => { $("cloudNow").textContent = "Saving…"; await cloudSync(); $("cloudNow").textContent = "Save now"; });
+$("cloudOffBtn").addEventListener("click", () => {
+  if (!confirm("Turn off cloud backup on this device? Your collection stays here, and the copy in GitHub stays too.")) return;
+  cloud = {}; keepCloud(); renderCloud();
+});
+// Pick up changes made on another device when coming back to this tab; save right away when leaving it.
+document.addEventListener("visibilitychange", () => { if (cloud.gist && !viewOnly) cloudSync(); });
 
 // ----- Share link -----
 // The binder (artists + owned cards) is packed into the part of the link after "#",
@@ -1464,7 +1711,7 @@ function shareData(){
     const i = k.indexOf(":"), lang = k.slice(0, i);
     if (langs.has(lang)) (owned[lang] ||= []).push(k.slice(i + 1));
   });
-  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), m: state.masterSets.map(x => [x.name, x.groups]), o: owned, c: state.cat };
+  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), m: state.masterSets.map(x => [x.name, x.groups]), w: Object.entries(state.versions), o: owned, c: state.cat };
 }
 
 $("shareBtn").addEventListener("click", async () => {
@@ -1497,6 +1744,7 @@ async function openShared(code){
             pokemon: (d.p || []).map(([name, lang]) => ({ name, lang, kind: "poke" })),
             masterSets: (d.m || []).map(([name, groups]) => ({ name, groups, lang: "tcgp", kind: "ms" })),
             fullArts: (d.f || []).map(([lang, id, vid, tp]) => ({ lang, id, ...(vid ? { vid } : {}), ...(tp ? { tp } : {}) })),
+            versions: Object.fromEntries(Array.isArray(d.w) ? d.w : []),
             cat: d.c === "sir" ? "fa" : ["ex", "poke", "fa", "top", "ms"].includes(d.c) ? d.c : "artists", exSub: "all" };
   state.active = state.artists[0] ? akey(state.artists[0]) : null;
   state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
@@ -1517,6 +1765,7 @@ async function openShared(code){
   }
   loadNames("en");
   render();
+  renderCloud(); cloudSync();
   updateAddBox();
   loadArtist(activeList());
   allLists().forEach(loadArtist);

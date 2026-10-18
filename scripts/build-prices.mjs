@@ -6,7 +6,10 @@ import { writeFile, mkdir } from "node:fs/promises";
 
 const BASE = "https://tcgcsv.com/tcgplayer";
 const CATEGORY = 3; // Pokémon (English)
-const PREFERRED = ["Holofoil", "Normal", "1st Edition Holofoil", "1st Edition", "Unlimited Holofoil", "Unlimited", "Reverse Holofoil"];
+// The price a card gets when we don't know which printing the owner has: the common one. Unlimited before
+// 1st Edition, regular before reverse holo, and regular before "Holofoil" (old e-card sets list their
+// reverse holos as Holofoil). The app's version picker uses printings/ for the others.
+const PREFERRED = ["Normal", "Unlimited", "Holofoil", "Unlimited Holofoil", "1st Edition", "1st Edition Holofoil", "Reverse Holofoil"];
 
 async function getJSON(url, tries = 4) {
   for (let i = 1; ; i++) {
@@ -64,6 +67,7 @@ console.log(`${groups.length} groups`);
 const sets = [];
 const cards = {};
 const ids = {}; // TCGplayer productId → price, for exact versions (e.g. a Pokémon Center stamped promo)
+const byPrinting = {}; // productId → { printing: price } for cards sold in several printings (→ printings/NN.json)
 let count = 0, i = 0;
 
 async function worker() {
@@ -90,6 +94,8 @@ async function worker() {
       if (price == null) continue;
       (cards[normNum(num)] ||= []).push([setIdx, normName(prod.name), price]);
       ids[prod.productId] = price;
+      const priced = Object.entries(printings).filter(([, v]) => v > 0);
+      if (priced.length > 1) byPrinting[prod.productId] = Object.fromEntries(priced.map(([t, v]) => [t, Math.round(v * 100) / 100]));
       count++;
     }
     await writeFile(`sets/${g.groupId}.json`, JSON.stringify({ id: g.groupId, name: g.name, cards: list }));
@@ -101,3 +107,9 @@ if (ONLY.length){ console.log(`Updated set lists for ${groups.map(g => g.name).j
 if (count < 1000) throw new Error(`Only ${count} priced cards found; refusing to overwrite prices.json`);
 await writeFile("prices.json", JSON.stringify({ updated: new Date().toISOString(), sets, cards, ids }));
 console.log(`Wrote prices.json with ${count} priced cards from ${sets.length} sets`);
+// printings/NN.json (NN = productId % 100): each printing's price, for the app's "Your version" picker.
+await mkdir("printings", { recursive: true });
+const shards = Array.from({ length: 100 }, () => ({}));
+Object.entries(byPrinting).forEach(([id, v]) => shards[id % 100][id] = v);
+await Promise.all(shards.map((sh, i) => writeFile(`printings/${String(i).padStart(2, "0")}.json`, JSON.stringify(sh))));
+console.log(`Wrote printings/ for ${Object.keys(byPrinting).length} cards sold in several printings`);

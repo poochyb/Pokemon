@@ -34,7 +34,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add prices.json history sets
+          git add prices.json history sets printings
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
           git commit -m "Update TCGplayer prices and set lists"
           # If another run saved first, rebuild on top of it instead of failing.
