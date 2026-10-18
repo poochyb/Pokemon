@@ -15,6 +15,9 @@ on:
       jq:
         description: "Optional jq filter applied to each JSON response (prints its output instead of the raw text)"
         default: ""
+      grep:
+        description: "Optional regex (grep -oE) to pull matching snippets out of each response, e.g. prices from a web page"
+        default: ""
 
 permissions:
   contents: read
@@ -28,10 +31,16 @@ jobs:
           PATHS: ${{ inputs.paths }}
           MAX: ${{ inputs.max_chars }}
           JQ: ${{ inputs.jq }}
+          GREP: ${{ inputs.grep }}
         run: |
           set -f  # keep * and ? in paths literal
           for p in $PATHS; do
             case "$p" in /v2/*) url="https://api.tcgdex.net$p";; https://*) url="$p";; *) echo "skipping $p"; continue;; esac
+            if [ -n "$GREP" ]; then
+              curl -sSL -m 30 -A "Mozilla/5.0" "$url" -o /tmp/out.txt -w '%{url_effective}\n' | sed 's/^/===== /' || true
+              tr -s '\n\t ' '   ' < /tmp/out.txt | grep -oE "$GREP" | head -40
+              continue
+            fi
             if [ -n "$JQ" ]; then
               curl -sS -m 30 "$url" -o /tmp/out.txt || true
               jq -r "$JQ" /tmp/out.txt 2>/dev/null || echo "$p	(no JSON: $(head -c 100 /tmp/out.txt))"
