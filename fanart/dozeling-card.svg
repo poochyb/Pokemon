@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 630 880" width="630" height="880">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2d3561"/><stop offset=".6" stop-color="#6b5b95"/><stop offset="1" stop-color="#c0a6c9"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5f8f6e"/><stop offset="1" stop-color="#36584a"/>
+    </linearGradient>
+    <radialGradient id="fur" cx=".4" cy=".3" r=".8">
+      <stop offset="0" stop-color="#f3c98b"/><stop offset="1" stop-color="#c98a4b"/>
+    </radialGradient>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b9c4e0"/><stop offset=".5" stop-color="#8f9cc6"/><stop offset="1" stop-color="#c7d0ea"/>
+    </linearGradient>
+    <clipPath id="win"><rect x="48" y="112" width="534" height="380" rx="6"/></clipPath>
+  </defs>
+
+  <rect width="630" height="880" rx="30" fill="url(#frame)"/>
+  <rect x="22" y="22" width="586" height="836" rx="18" fill="#eeeaf2"/>
+
+  <text x="52" y="86" font-family="Georgia, serif" font-size="46" font-weight="bold" fill="#2b2b3b">Dozeling</text>
+  <text x="470" y="86" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#2b2b3b">HP</text>
+  <text x="502" y="88" font-family="Georgia, serif" font-size="40" font-weight="bold" fill="#2b2b3b">120</text>
+
+  <rect x="44" y="108" width="542" height="388" rx="8" fill="#7d86b3"/>
+  <g clip-path="url(#win)">
+    <rect x="48" y="112" width="534" height="380" fill="url(#sky)"/>
+    <g fill="#fff8d6">
+      <circle cx="110" cy="150" r="2.5"/><circle cx="200" cy="200" r="2"/><circle cx="300" cy="140" r="2.5"/>
+      <circle cx="380" cy="210" r="2"/><circle cx="540" cy="150" r="2.5"/><circle cx="250" cy="250" r="1.8"/><circle cx="560" cy="250" r="2"/>
+    </g>
+    <path d="M470 150 a42 42 0 1 0 30 70 a34 34 0 1 1 -30 -70Z" fill="#fff1b8"/>
+    <path d="M48 410 Q200 350 340 390 T582 370 V492 H48Z" fill="#7aa786"/>
+    <path d="M48 450 Q220 410 380 440 T582 430 V492 H48Z" fill="url(#hill)"/>
+    <!-- giant mushroom -->
+    <rect x="420" y="330" width="36" height="120" rx="12" fill="#efe3cf"/>
+    <path d="M370 340 Q438 250 506 340Z" fill="#d9605a"/>
+    <g fill="#fbe9e0"><circle cx="410" cy="318" r="9"/><circle cx="445" cy="296" r="7"/><circle cx="475" cy="322" r="8"/></g>
+    <!-- fireflies -->
+    <g fill="#f8f39b"><circle cx="160" cy="330" r="4"/><circle cx="530" cy="300" r="3.5"/><circle cx="350" cy="250" r="3"/></g>
+    <g fill="#f8f39b" opacity=".3"><circle cx="160" cy="330" r="10"/><circle cx="530" cy="300" r="9"/><circle cx="350" cy="250" r="8"/></g>
+
+    <!-- Dozeling: a round fox-like creature curled up asleep on a leaf -->
+    <g transform="translate(250 400)">
+      <ellipse cx="0" cy="40" rx="170" ry="34" fill="#4c8a52"/>
+      <path d="M-170 40 Q0 20 170 40" stroke="#2f6b3a" stroke-width="3" fill="none"/>
+      <!-- tail wrapped around -->
+      <path d="M90 20 Q150 -20 110 -70 Q90 -95 60 -80 Q100 -50 70 0Z" fill="#f6efe2"/>
+      <path d="M70 0 Q120 -40 95 -70" stroke="#e8c79a" stroke-width="3" fill="none"/>
+      <!-- body -->
+      <ellipse cx="0" cy="-10" rx="110" ry="62" fill="url(#fur)"/>
+      <ellipse cx="-20" cy="10" rx="60" ry="26" fill="#f6efe2"/>
+      <!-- head resting on paws -->
+      <ellipse cx="-70" cy="-30" rx="58" ry="48" fill="url(#fur)"/>
+      <path d="M-115 -60 Q-140 -120 -95 -78Z" fill="#c98a4b"/>
+      <path d="M-58 -72 Q-40 -128 -30 -62Z" fill="#c98a4b"/>
+      <path d="M-112 -66 Q-128 -102 -102 -80Z" fill="#7a4b8f"/>
+      <path d="M-52 -74 Q-42 -110 -38 -68Z" fill="#7a4b8f"/>
+      <!-- moon mark on forehead -->
+      <path d="M-74 -58 a8 8 0 1 0 6 12 a6 6 0 1 1 -6 -12Z" fill="#fff1b8"/>
+      <ellipse cx="-78" cy="-6" rx="30" ry="18" fill="#f6efe2"/>
+      <path d="M-98 -32 Q-90 -26 -82 -32" stroke="#3b2a2a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M-62 -32 Q-54 -26 -46 -32" stroke="#3b2a2a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="-72" cy="-14" rx="5" ry="3.5" fill="#3b2a2a"/>
+      <ellipse cx="-104" cy="-18" rx="8" ry="5" fill="#f2a7a0" opacity=".6"/>
+      <ellipse cx="-40" cy="-18" rx="8" ry="5" fill="#f2a7a0" opacity=".6"/>
+      <!-- paws -->
+      <ellipse cx="-100" cy="16" rx="18" ry="11" fill="#e8b277"/>
+      <ellipse cx="-58" cy="18" rx="18" ry="11" fill="#e8b277"/>
+    </g>
+    <g font-family="Georgia, serif" font-weight="bold" fill="#f3eefb" opacity=".85">
+      <text x="200" y="300" font-size="22">z</text><text x="220" y="276" font-size="30">z</text><text x="246" y="246" font-size="38">Z</text>
+    </g>
+  </g>
+
+  <rect x="80" y="506" width="470" height="26" rx="6" fill="#d6cfe3"/>
+  <text x="315" y="525" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="15" fill="#3b3b4b">Moonnap Creature · Height 2'3" · Weight 31 lbs.</text>
+
+  <g font-family="Georgia, serif" fill="#2b2b3b">
+    <circle cx="70" cy="580" r="14" fill="#f4f1ea" stroke="#999"/>
+    <text x="100" y="590" font-size="28" font-weight="bold">Lullaby Hum</text>
+    <text x="60" y="622" font-size="17">Your opponent's Active creature is now Asleep.</text>
+    <line x1="60" y1="648" x2="570" y2="648" stroke="#cfc6dd"/>
+    <circle cx="70" cy="690" r="14" fill="#f4f1ea" stroke="#999"/>
+    <circle cx="102" cy="690" r="14" fill="#f4f1ea" stroke="#999"/>
+    <text x="132" y="700" font-size="28" font-weight="bold">Dream Pounce</text>
+    <text x="566" y="702" text-anchor="end" font-size="34" font-weight="bold">70</text>
+  </g>
+
+  <line x1="60" y1="740" x2="570" y2="740" stroke="#cfc6dd"/>
+  <text x="60" y="770" font-family="Georgia, serif" font-size="15" fill="#3b3b4b">weakness ×2   resistance —   retreat ●●</text>
+  <text x="60" y="812" font-family="Georgia, serif" font-style="italic" font-size="14" fill="#555">It naps under glowing mushrooms, and its humming makes whole forests yawn.</text>
+  <text x="60" y="840" font-family="Georgia, serif" font-size="12" fill="#777">Original fan-made creature · not an official card</text>
+</svg>
