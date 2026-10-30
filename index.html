@@ -422,6 +422,13 @@ if (!state.masterSets){ // first time: start with the 30th Celebration master se
   state.masterSets = [{ name: "30th Celebration", groups: [24722, 24837] }];
   state.activeMs = "ms|24722,24837";
 }
+// Master sets the owner asked to have added, each added once (so removing one later sticks).
+state.seeded = state.seeded || [];
+[["Chaos Rising", [24655]]].forEach(([name, groups]) => {
+  if (state.seeded.includes(name)) return;
+  state.seeded.push(name);
+  if (!state.masterSets.some(m => m.groups.join() === groups.join())) state.masterSets.push({ name, groups });
+});
 state.masterSets = state.masterSets.map(m => ({ name: m.name, groups: m.groups, lang: "tcgp", kind: "ms" }));
 state.activeMs = state.activeMs || (state.masterSets[0] ? mkey(state.masterSets[0]) : null);
 // Pokémon category: one sub-tab per Pokémon you add (like artists).
@@ -1597,7 +1604,11 @@ async function cloudSync(){
   cloudBusy = (async () => {
     try {
       const remote = await readGist();
-      const remoteChanged = remote && remote.savedAt !== cloud.synced, localChanged = collectionHash() !== cloud.hash;
+      let remoteChanged = remote && remote.savedAt !== cloud.synced, localChanged = collectionHash() !== cloud.hash;
+      const { savedAt: _s, app: _a, ...remoteData } = remote || {};
+      if (remoteChanged && localChanged && JSON.stringify(remoteData) === JSON.stringify(backupData())){ // same change on both
+        Object.assign(cloud, { hash: collectionHash(), synced: remote.savedAt }); remoteChanged = localChanged = false;
+      }
       let useRemote = remoteChanged && !localChanged;
       if (remoteChanged && localChanged){
         useRemote = !cardCount(backupData()) || confirm(`Your cloud backup was changed somewhere else (saved ${whenText(remote.savedAt)}, ${cardCount(remote)} cards), and this device has changes too (${cardCount(backupData())} cards).\n\nOK: use the cloud copy on this device.\nCancel: keep this device’s collection and save it to the cloud.\n\n(Either way, the other copy stays in the cloud backup’s older versions.)`);
