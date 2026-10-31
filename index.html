@@ -426,13 +426,22 @@ if (!state.masterSets){ // first time: start with the 30th Celebration master se
 // ones already added travels with backups and the cloud backup; with cloud backup on, sets are added only
 // after the cloud copy is checked, so a set removed on one device isn't brought back by another.
 state.seeded = state.seeded || [];
-const SEED_SETS = [["Chaos Rising", [24655]], ["Shiny Vault", [2781, 2594]]];
+// A group can be part of a set: "23353:92-223" = TCGplayer set 23353, card numbers 92 to 223 only.
+// [name, groups, tab]: with a tab name, the groups are added to that tab (if the owner still has it) instead.
+const SEED_SETS = [["Chaos Rising", [24655]], ["Shiny Vault", [2781, 2594]],
+                   ["Shiny Vault + Paldean Fates", ["23353:92-223"], "Shiny Vault"]];
 function seedMasterSets(){
   let added = false;
-  SEED_SETS.forEach(([name, groups]) => {
+  SEED_SETS.forEach(([name, groups, into]) => {
     if (state.seeded.includes(name)) return;
     state.seeded.push(name);
-    if (!state.masterSets.some(m => m.groups.join() === groups.join())){ state.masterSets.push({ name, groups, lang: "tcgp", kind: "ms" }); added = true; }
+    if (into){
+      const m = state.masterSets.find(x => x.name === into); if (!m) return;
+      const was = mkey(m), more = groups.filter(g => !m.groups.map(String).includes(String(g)));
+      if (!more.length) return;
+      m.groups = [...m.groups, ...more]; added = true;
+      if (state.activeMs === was) state.activeMs = mkey(m);
+    } else if (!state.masterSets.some(m => m.groups.join() === groups.join())){ state.masterSets.push({ name, groups, lang: "tcgp", kind: "ms" }); added = true; }
   });
   return added;
 }
@@ -694,7 +703,11 @@ async function loadMasterSet(a){
   if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
   mem.loading[k] = true; render();
   try {
-    const sets = await Promise.all(a.groups.map(g => fetch(`sets/${g}.json`).then(r => r.ok ? r.json() : null)));
+    const sets = await Promise.all(a.groups.map(g => {
+      const [id, range] = String(g).split(":"), [lo, hi] = (range || "").split("-").map(Number);
+      return fetch(`sets/${id}.json`).then(r => r.ok ? r.json() : null).then(st => !st || !range ? st
+        : { ...st, cards: st.cards.filter(c => { const n = parseInt(c.num, 10); return n >= lo && n <= hi; }) });
+    }));
     if (!sets[0]) throw Object.assign(new Error("not ready"), { notReady: true });
     const cards = [];
     sets.forEach((st, gi) => st && st.cards.forEach(c => {
