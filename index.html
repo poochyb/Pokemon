@@ -696,8 +696,12 @@ async function loadMasterSet(a){
         tcgImg: `https://tcgplayer-cdn.tcgplayer.com/product/${c.p}_200w.jpg`, tcgImgL: `https://tcgplayer-cdn.tcgplayer.com/product/${c.p}_in_1000x1000.jpg`,
       }));
     }));
-    await linkToTcgdex(sets, cards);
-    mem.cards[k] = cards; delete mem.errors[k]; remember(k);
+    if (!await linkToTcgdex(sets, cards)){ // TCGdex didn't answer: reuse earlier links, and try again in a minute
+      const before = new Map((listCache[k]?.cards || []).filter(c => c.link).map(c => [c.id, c.link]));
+      cards.forEach(c => { if (!c.link && before.has(c.id)) c.link = before.get(c.id); });
+      clearTimeout(mem.retry[k]); mem.retry[k] = setTimeout(() => { delete mem.retry[k]; mem.stale[k] = true; loadMasterSet(a); }, 60000);
+    }
+    mem.cards[k] = cards; delete mem.errors[k]; delete mem.stale[k]; knownSig = ""; remember(k);
   } catch(e){
     if (e.notReady) mem.errors[k] = "This set’s checklist isn’t ready yet. It gets built with tonight’s price update; check back tomorrow.";
     else useSaved(a, k, `Couldn’t load this set’s checklist (${e.message}).`);
@@ -706,6 +710,25 @@ async function loadMasterSet(a){
 
 // Match each TCGplayer set to its TCGdex set by name, then each card by number (or by name when the subset
 // keeps the original card numbers, like the Classic Collection). Only a card's first printing gets the link.
+// How well a TCGplayer set name matches a TCGdex one (1+ = same set). Words with digits ("30th", "151") must
+// agree, so "30th Celebration Classic Collection" isn't taken for 2021's "Celebrations Classic Collection".
+function setMatch(want, name){
+  const have = setWords(name), shared = [...want].filter(w => have.has(w)).length;
+  const score = shared ? shared / Math.min(want.size, have.size) + shared / (want.size + have.size) : 0;
+  return [...want].some(w => /\d/.test(w) && !have.has(w)) ? score / 2 : score;
+}
+const firstPrintings = (cards, setId) => cards.filter(c => c.setId === setId && !cards.some(o => o.pid === c.pid && o.order < c.order));
+// Link each TCGplayer card to one TCGdex card: same number with a matching name, else a name used only once.
+function linkCards(firsts, tc, byNameToo = true){ // tc: [{k (TCGdex key), num, name}]; by name only for whole sets
+  const byNum = new Map(tc.map(x => [normNum(x.num), x]));
+  const byName = new Map(); tc.forEach(x => { const n = normName(x.name); byName.set(n, byName.has(n) ? null : x); }); // null = name not unique
+  for (const c of firsts){
+    if (c.link) continue;
+    const n = normName(c.name), m = byNum.get(normNum(c.num)), mn = m && normName(m.name);
+    const hit = m && (mn === n || mn.startsWith(n) || n.startsWith(mn)) ? m : byNameToo ? byName.get(n) : null;
+    if (hit) c.link = hit.k;
+  }
+}
 async function linkToTcgdex(sets, cards){
   try {
     const tSets = await loadSets("en");
@@ -713,23 +736,37 @@ async function linkToTcgdex(sets, cards){
       if (!st) continue;
       const want = setWords(shortSetName(st.name));
       let best = null, bestScore = 0;
-      for (const [id, info] of Object.entries(tSets)){
-        const have = setWords(info.name), shared = [...want].filter(w => have.has(w)).length;
-        const score = shared ? shared / Math.min(want.size, have.size) + shared / (want.size + have.size) : 0;
-        if (score > bestScore){ best = id; bestScore = score; }
-      }
+      for (const [id, info] of Object.entries(tSets)){ const sc = setMatch(want, info.name); if (sc > bestScore){ best = id; bestScore = sc; } }
       if (!best || bestScore < 1) continue;
       const tc = (await getJSON(`${API}/en/sets/${encodeURIComponent(best)}`)).cards || [];
-      const byNum = new Map(tc.map(x => [normNum(x.localId), x]));
-      const byName = new Map(); tc.forEach(x => { const n = normName(x.name); byName.set(n, byName.has(n) ? null : x); }); // null = name not unique
-      const firsts = cards.filter(c => c.setId === String(st.id) && !cards.some(o => o.pid === c.pid && o.order < c.order));
-      for (const c of firsts){
-        const n = normName(c.name), m = byNum.get(normNum(c.num));
-        const hit = m && (normName(m.name) === n || normName(m.name).startsWith(n) || n.startsWith(normName(m.name))) ? m : byName.get(n);
-        if (hit) c.link = ckey("en", hit.id);
-      }
+      linkCards(firstPrintings(cards, String(st.id)), tc.map(x => ({ k: ckey("en", x.id), num: x.localId, name: x.name })));
     }
-  } catch(e){ /* TCGdex unreachable: the checklist still works, just without links */ }
+    return true;
+  } catch(e){ return false; } // TCGdex unreachable: try again later; meanwhile linkFromKnown() helps
+}
+// Without TCGdex: link master-set cards to cards the app already knows (Full Arts entries, loaded tabs) by set
+// name, number and name. Runs whenever those lists change, so a card is never counted twice in the totals.
+let knownSig = "";
+function linkFromKnown(){
+  const msLists = state.masterSets.filter(m => mem.cards[mkey(m)]);
+  if (!msLists.length) return;
+  const sig = allLists().map(a => (mem.cards[lkey(a)] || []).length).join() + "|" + state.fullArts.length;
+  if (sig === knownSig) return;
+  knownSig = sig;
+  const known = new Map(); // set name → [{k, num, name}]
+  const add = (k, set, num, name) => { if (set && num && name) (known.get(set) || known.set(set, []).get(set)).push({ k, num, name }); };
+  state.fullArts.forEach(e => e.lang === "en" && add(ckey("en", e.id), e.setName, e.num, e.name));
+  allLists().forEach(a => { if (a.kind === "ms" || a.kind === "top" || a.kind === "fa") return;
+    (cardsOf(a) || []).forEach(c => cardLang(a, c) === "en" && add(ckey("en", c.id), setName(a, c), c.num, c.name)); });
+  for (const m of msLists){
+    const cards = mem.cards[mkey(m)];
+    new Set(cards.map(c => c.setId)).forEach(setId => {
+      const want = setWords(cards.find(c => c.setId === setId).setName);
+      let best = null, bestScore = 1;
+      for (const [set, tc] of known){ const sc = setMatch(want, set); if (sc >= bestScore){ best = tc; bestScore = sc; } }
+      if (best) linkCards(firstPrintings(cards, setId), best, false); // only some of the set's cards are known: match by number
+    });
+  }
 }
 
 // Every card whose name ends in "EX" or "ex" (e.g. "M Charizard EX", "Mega Gallade ex"), English only.
@@ -853,6 +890,7 @@ function allLists(){ return [FA_LIST, ...state.artists, ...state.pokemon, EX_LIS
 // A card owned in two lists (say a Pokémon tab and a master set) counts once: the first copy, unless only a later one has a price.
 function keepFirstPriced(seen, k, a, c){ const e = seen.get(k); return !e || (!e._p?.p && !!priceOf(a, c)?.p); }
 function ownedEverywhere(){
+  linkFromKnown();
   const seen = new Map();
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
     const k = idKey(a, c);
@@ -936,6 +974,7 @@ function updateTabArrows(){
 }
 
 function render(){
+  linkFromKnown();
   renderTabs();
   renderTotal();
   const a = activeList(), m = $("main"), tb = $("toolbar");
@@ -986,6 +1025,7 @@ function render(){
 
 // Value of every owned card across all categories (each card counted once).
 function renderTotal(){
+  linkFromKnown();
   const seen = new Map();
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
     const k = idKey(a, c);
