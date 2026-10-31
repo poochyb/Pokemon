@@ -424,7 +424,7 @@ if (!state.masterSets){ // first time: start with the 30th Celebration master se
 }
 // Master sets the owner asked to have added, each added once (so removing one later sticks).
 state.seeded = state.seeded || [];
-[["Chaos Rising", [24655]]].forEach(([name, groups]) => {
+[["Chaos Rising", [24655]], ["Shiny Vault", [2781, 2594]]].forEach(([name, groups]) => {
   if (state.seeded.includes(name)) return;
   state.seeded.push(name);
   if (!state.masterSets.some(m => m.groups.join() === groups.join())) state.masterSets.push({ name, groups });
@@ -689,7 +689,7 @@ async function loadMasterSet(a){
     if (!sets[0]) throw Object.assign(new Error("not ready"), { notReady: true });
     const cards = [];
     sets.forEach((st, gi) => st && st.cards.forEach(c => {
-      const n = parseInt(c.num, 10) || 9000; // special numbers like "R/RGB" go after the numbered cards
+      const n = parseInt(String(c.num).replace(/^(SV|TG|GG)/i, ""), 10) || 9000; // "SV039" sorts as 39; numbers like "R/RGB" go last
       Object.keys(c.s).sort((x, y) => (PRINT_ORDER.indexOf(x) + 1 || 99) - (PRINT_ORDER.indexOf(y) + 1 || 99)).forEach((t, ti) => cards.push({
         id: `${c.p}~${t}`, pid: c.p, num: c.num, name: c.n.replace(" - " + c.num, "").replace(/\s+-\s+[^-]*\d[^-]*$/, ""), rarity: c.r, vlabel: printLabel(t), price: c.s[t],
         multi: Object.keys(c.s).length > 1, setId: String(st.id), setName: shortSetName(st.name), order: gi * 100000 + n * 10 + ti,
