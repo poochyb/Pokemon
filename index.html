@@ -608,7 +608,10 @@ function priceOf(a, c){
   const vp = ver && versionPrice(k, ver); if (vp) return { p: vp, t: pr?.t || Date.now() }; // the version the owner has
   const mp = pr?.tp && versionPrice(k, { tp: pr.tp, ty: pr.mt }); // the card's main version, today's TCGplayer price
   if (mp) return { p: mp, t: pr.t };
-  if (!pr || (pr.p?.c === "USD" && !pr.p.rev) || cardLang(a, c) !== "en") return pr;
+  if ((!pr && c.image !== "") || pr?.p?.c === "USD" && !pr.p.rev || cardLang(a, c) !== "en") return pr;
+  const m = tcgpMatch(c, "en"); // the same card in TCGplayer's set file (also before TCGdex answers, for cards it has no picture for)
+  if (m?.price != null) return { p: { v: m.price, c: "USD" }, t: pr?.t || Date.now() };
+  if (!pr) return pr;
   const v = tcgplayerPrice(c, setName(a, c)); // (a price TCGdex only had for the reverse holo is a last resort)
   return v != null ? { p: { v, c: "USD" }, t: pr.t } : pr;
 }
@@ -693,11 +696,52 @@ function sumValue(entries){
 function cardImages(c, lang){
   if (c.tcgImg) return { small: c.tcgImg, large: c.tcgImgL };
   if (c.image) return { small: c.image + "/low.webp", large: c.image + "/high.webp" };
-  if (lang !== "en" || !c.setId || !c.num) return null;
+  if (lang !== "en") return null;
+  const m = tcgpMatch(c, lang); // the same card on TCGplayer (its product photo)
+  if (m) return { small: `https://tcgplayer-cdn.tcgplayer.com/product/${m.p}_200w.jpg`, large: `https://tcgplayer-cdn.tcgplayer.com/product/${m.p}_in_1000x1000.jpg` };
+  if (!c.setId || !c.num) return null;
   const set = c.setId.replace(/\./g, "pt").replace(/^(sv|me)0(\d)/, "$1$2"); // "swsh12.5gg" → "swsh12pt5gg", "sv03.5" → "sv3pt5"
   const num = /^\d+$/.test(c.num) ? String(+c.num) : c.num;                     // "090" → "90"; "TG01" stays
   const base = `https://images.pokemontcg.io/${encodeURIComponent(set)}/${encodeURIComponent(num)}`;
   return { small: base + ".png", large: base + "_hires.png" };
+}
+// For English cards TCGdex has no picture or dollar price for (e.g. the 30th Celebration Classic Collection,
+// numbered 016 on TCGdex but 85/124 on TCGplayer): the same card in TCGplayer's set file (sets/<groupId>.json),
+// found by set name, then card number + name, else a name used once in that set. null if none (or still loading).
+const groupFiles = {}, setGroup = {};
+function tcgpMatch(c, lang){
+  if (lang !== "en" || !c.id || !setIndex) return null;
+  const sn = c.setName || state.details[ckey(lang, c.id)]?.s;
+  if (!sn) return null;
+  if (!(sn in setGroup)){
+    const want = setWords(sn);
+    let best = null, bestScore = 1;
+    if (want.size) for (const g of setIndex){ const sc = setMatch(want, shortSetName(g.name)); if (sc >= bestScore && (!best || sc > bestScore)){ best = g.id; bestScore = sc; } }
+    setGroup[sn] = best;
+  }
+  const gid = setGroup[sn]; if (!gid) return null;
+  if (!(gid in groupFiles)){
+    groupFiles[gid] = undefined;
+    fetch(`sets/${gid}.json`).then(r => r.ok ? r.json() : null).catch(() => null).then(st => {
+      const byNum = new Map(), byName = new Map();
+      (st?.cards || []).forEach(x => {
+        const n = normName(x.n), e = { p: x.p, n, r: x.r || "",
+          price: PRINT_ORDER.concat(Object.keys(x.s)).map(t => x.s[t]).find(v => v != null) ?? null };
+        (byNum.get(normNum(x.num)) || byNum.set(normNum(x.num), []).get(normNum(x.num))).push(e);
+        byName.set(n, byName.has(n) ? null : e); // null = name not unique
+      });
+      groupFiles[gid] = { byNum, byName }; render();
+    });
+    return null;
+  }
+  const f = groupFiles[gid]; if (!f) return null;
+  const n = normName(c.name);
+  return (f.byNum.get(normNum(c.num || "")) || []).find(x => x.n === n || x.n.startsWith(n) || n.startsWith(x.n)) || f.byName.get(n) || null;
+}
+// A card's rarity ("None" is what TCGdex says when it doesn't know; then TCGplayer's, e.g. "Classic Collection").
+function rarityOf(lang, c){
+  const r = state.details[ckey(lang, c.id)]?.r;
+  return r && r !== "None" ? r : tcgpMatch(c, lang)?.r || "";
 }
 // If a picture can't be loaded, show the "No image yet" box instead of a broken image.
 function noPicture(img){
@@ -780,7 +824,7 @@ async function loadPokemon(a){
 
 // TCGplayer's set list (sets/index.json) for the "Add a set…" suggestions and names.
 let setIndex = null;
-const setIndexReady = fetch("sets/index.json").then(r => r.ok ? r.json() : []).catch(() => []).then(d => { setIndex = d; fillDatalist($("langInput").value); return d; });
+const setIndexReady = fetch("sets/index.json").then(r => r.ok ? r.json() : []).catch(() => []).then(d => { setIndex = d; fillDatalist($("langInput").value); render(); return d; });
 const PRINT_ORDER = ["Normal", "Holofoil", "Reverse Holofoil", "1st Edition", "1st Edition Holofoil", "Unlimited", "Unlimited Holofoil"];
 const printLabel = t => ({ Normal: "Regular", Holofoil: "Holo", "Reverse Holofoil": "Reverse holo" })[t] || t;
 const shortSetName = n => String(n).replace(/^[A-Z0-9]+:\s*/, ""); // "ME: 30th Celebration" → "30th Celebration"
@@ -1193,7 +1237,7 @@ function renderGrid(){
   const note = a.kind === "top" ? (Object.keys(mem.stale).length ? "TCGdex (the card database) isn’t responding right now, so some cards come from your saved copy." : "") : mem.notes[k];
   if (note) st.textContent = "⚠️ " + note + " " + st.textContent;
   $("grid").innerHTML = list.map((c, i) => {
-    const own = isOwned(a, c), d = state.details[ckey(cardLang(a, c), c.id)] || {};
+    const own = isOwned(a, c), d = { r: c.pid ? "" : rarityOf(cardLang(a, c), c) };
     const vl = c.vlabel || (a.kind !== "ms" && chosenVersion(ckey(cardLang(a, c), c.id))?.l) || "";
     const sn = setName(a, c), pr = priceOf(a, c);
     const priceTxt = !pr ? `<span class="price muted">Price loading…</span>`
@@ -1577,11 +1621,11 @@ async function openPriceHistory(a, c){
   await loadSeries();
 }
 function pdSubtitle(){
-  const { a, c, k } = ph, d = state.details[k] || {};
+  const { a, c, k } = ph, d = { r: c.pid ? "" : rarityOf(cardLang(a, c), c) };
   $("pdSub").textContent = [setName(a, c) + (c.num ? " #" + c.num : ""), (a.kind !== "ms" && chosenVersion(k)?.l) || c.vlabel || d.r].filter(Boolean).join(" · ");
 }
 async function loadSeries(){
-  const { c, k } = ph, tp = (ph.a.kind !== "ms" && chosenVersion(k)?.tp) || c.pid || state.prices[k]?.tp;
+  const { c, k } = ph, tp = (ph.a.kind !== "ms" && chosenVersion(k)?.tp) || c.pid || state.prices[k]?.tp || tcgpMatch(c, cardLang(ph.a, c))?.p;
   ph.series = null;
   ph.series = tp ? await loadHistory(tp) : [];
   if (ph.k === k) drawPriceHistory();
@@ -1793,7 +1837,7 @@ function renderHome(){
       <section class="panel">
         <div class="hsec"><h3>Card of the day</h3></div>
         ${pick ? `<div class="spot">${homeCard(T, pick)}<div class="spot-info"><b>${esc(pick.name)}</b><span>${esc(setName(T, pick))}${pick.num ? " #" + esc(pick.num) : ""}</span>
-          ${pick.vlabel || state.details[ckey(pick.lang, pick.id)]?.r ? `<span>${esc(pick.vlabel || state.details[ckey(pick.lang, pick.id)].r)}</span>` : ""}
+          ${pick.vlabel || rarityOf(pick.lang, pick) ? `<span>${esc(pick.vlabel || rarityOf(pick.lang, pick))}</span>` : ""}
           <span class="price">${(p => p ? money(p.v, p.c) : "")(priceOf(T, pick)?.p)}</span></div></div>`
         : `<p class="home-empty">Your cards will take turns here, one each day.</p>`}
       </section>
