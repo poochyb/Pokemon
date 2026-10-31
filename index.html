@@ -30,6 +30,9 @@ button,input,select{font:inherit;color:inherit}
 .topbar{position:sticky;top:0;z-index:20;background:var(--cover);color:var(--cover-ink);box-shadow:0 6px 18px rgba(10,14,22,.22)}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .65rem;padding:.5rem var(--gutter) 0}
 h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:nowrap}
+.home-link{border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;padding:.2rem .35rem;margin:0 -.35rem;border-radius:8px;cursor:pointer}
+.home-link:hover{background:rgba(255,255,255,.1)}
+body.cat-home .home-link{color:var(--gold)}
 .add{display:flex;gap:.4rem;flex:0 1 auto;min-width:0}
 .add input{flex:0 1 10rem;width:10rem;min-width:0;padding:.35rem .7rem;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
 .add input::placeholder{color:rgba(242,245,250,.6)}
@@ -37,7 +40,8 @@ h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:n
 .add select option{color:#1C2433}
 .tools{display:flex;gap:.4rem;position:relative}
 .foot-tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.9rem}
-.cats{display:inline-flex;border-radius:9px;background:rgba(255,255,255,.1);padding:2px}
+.cats{display:inline-flex;border-radius:9px;background:rgba(255,255,255,.1);padding:2px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
 .cats button{border:0;background:none;color:var(--cover-ink);padding:.25rem .6rem;border-radius:7px;cursor:pointer;white-space:nowrap;opacity:.8}
 .cats button[aria-pressed="true"]{background:var(--gold);color:#1C2433;font-weight:700;opacity:1}
 body.cat-fixed .add{display:none}
@@ -133,6 +137,88 @@ button.total.on strong{color:#1C2433}
 .which select{width:100%;margin-top:.15rem;font-size:.85rem;padding:.2rem;border-radius:6px;border:1px solid var(--line);background:var(--page)}
 .meta .remove{border:0;background:none;padding:.2rem 0 0;color:var(--muted);text-decoration:underline;font-size:.78rem;cursor:pointer}
 .insights{margin:0 0 1.5rem}
+
+/* ----- Homepage ----- */
+.home{display:flex;flex-direction:column;gap:2rem;max-width:1180px}
+.hero{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:1rem 1.5rem;align-items:center;
+  background:var(--cover);color:var(--cover-ink);border-radius:20px;padding:clamp(1.1rem,3vw,2.1rem);overflow:hidden;
+  box-shadow:inset 0 0 0 2px rgba(217,154,30,.55),0 10px 28px rgba(10,14,22,.22)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:radial-gradient(circle at 12% 18%,rgba(240,183,67,.35) 0 2px,transparent 3px),radial-gradient(circle at 44% 82%,rgba(255,255,255,.35) 0 1.5px,transparent 2.5px),
+    radial-gradient(circle at 58% 12%,rgba(255,255,255,.3) 0 1.5px,transparent 2.5px),radial-gradient(circle at 92% 70%,rgba(240,183,67,.3) 0 2px,transparent 3px),
+    radial-gradient(ellipse at 85% 40%,rgba(79,179,198,.22),transparent 55%),radial-gradient(ellipse at 10% 100%,rgba(217,154,30,.18),transparent 50%)}
+.hero > *{position:relative}
+.eyebrow{margin:0;color:var(--gold);font:700 .8rem/1 var(--display);letter-spacing:.12em;text-transform:uppercase}
+.hero h2{font:800 clamp(1.7rem,4.6vw,2.7rem)/1.02 var(--display);margin:.45rem 0 .55rem;letter-spacing:-.03em}
+.lede{margin:0 0 1.1rem;opacity:.85;max-width:34rem}
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.2rem,1fr));gap:.55rem;margin:0 0 1.1rem}
+.hero-stat{background:rgba(255,255,255,.08);border-radius:12px;padding:.55rem .75rem}
+.hero-stat b{display:block;font:800 1.35rem/1.15 var(--display);color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-stat span{font-size:.8rem;opacity:.8}
+.hero-cta{display:flex;flex-wrap:wrap;gap:.5rem}
+.fan{height:clamp(220px,28vw,310px)}
+.fc{border:0;padding:0;background:rgba(127,140,160,.18);border-radius:9px;overflow:hidden;cursor:pointer;display:block;aspect-ratio:63/88}
+.fc img{width:100%;height:100%;object-fit:cover;display:block}
+.fc .noimg{font-size:.75rem}
+.fan .fc{position:absolute;top:50%;left:50%;width:clamp(104px,13vw,158px);box-shadow:0 12px 26px rgba(0,0,0,.45);
+  transform:translate(-50%,-50%) translateX(var(--x)) translateY(var(--y)) rotate(var(--r));transition:transform .2s ease}
+.fan .fc:hover,.fan .fc:focus-visible{transform:translate(-50%,-50%) translateX(var(--x)) translateY(calc(var(--y) - 14px)) rotate(var(--r)) scale(1.05);z-index:9}
+.fan-empty{display:grid;place-items:center;height:100%;text-align:center;opacity:.7;border:2px dashed rgba(255,255,255,.25);border-radius:14px;padding:1rem}
+.hsec{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.25rem 1rem;margin:0 0 .8rem}
+.hsec h3{font:800 1.35rem/1.15 var(--display);margin:0;letter-spacing:-.02em}
+.hsec p{margin:0;color:var(--muted);font-size:.9rem}
+.home-row{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,2fr);gap:1rem}
+.panel{background:var(--desk);border-radius:16px;padding:1rem 1.1rem 1.1rem;min-width:0}
+.panel .hsec{margin-bottom:.7rem}
+.panel .hsec h3{font-size:1.1rem}
+.spot{display:flex;gap:1rem;align-items:center}
+.spot .fc{width:min(42%,150px);flex:none;box-shadow:0 8px 20px rgba(10,14,22,.25);outline:3px solid var(--gold)}
+.spot-info b{display:block;font:800 1.2rem/1.2 var(--display)}
+.spot-info span{display:block;color:var(--muted);font-size:.88rem}
+.spot-info .price{color:var(--ink);font:700 1.15rem var(--display);margin-top:.35rem}
+.strip{display:flex;gap:.8rem;overflow-x:auto;padding:.15rem .1rem .6rem;scroll-snap-type:x proximity}
+.mini{flex:0 0 108px;scroll-snap-align:start;font-size:.78rem;line-height:1.3;min-width:0}
+.mini .fc{outline:2px dashed var(--line);outline-offset:-2px}
+.mini.own .fc{outline:3px solid var(--gold)}
+.mini:not(.own) .fc img{opacity:.45}
+.mini b{display:block;margin-top:.35rem;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini span{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1rem}
+.tile{display:flex;flex-direction:column;gap:.45rem;background:var(--desk);border:0;border-radius:16px;padding:.9rem .95rem 1rem;
+  text-align:left;color:inherit;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;min-width:0}
+.tile:hover,.tile:focus-visible{transform:translateY(-3px);box-shadow:0 12px 24px rgba(10,14,22,.16)}
+.stack{position:relative;height:148px;margin-bottom:.35rem}
+.stack > *{position:absolute;bottom:0;width:92px;aspect-ratio:63/88;border-radius:7px;overflow:hidden;background:rgba(127,140,160,.18);box-shadow:0 5px 14px rgba(10,14,22,.28)}
+.stack img{width:100%;height:100%;object-fit:cover;display:block}
+.stack > :nth-child(1){left:50%;transform:translateX(-118%) rotate(-9deg);z-index:1}
+.stack > :nth-child(2){left:50%;transform:translateX(-50%) translateY(-6px);z-index:3}
+.stack > :nth-child(3){left:50%;transform:translateX(18%) rotate(9deg);z-index:2}
+.stack .dim img{opacity:.4}
+.stack.n2 > :nth-child(1){transform:translateX(-88%) rotate(-7deg)}
+.stack.n2 > :nth-child(2){transform:translateX(-12%) rotate(7deg)}
+.stack.n1 > :nth-child(1){transform:translateX(-50%) translateY(-6px)}
+.tile-name{font:800 1.08rem/1.2 var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile-sub{color:var(--muted);font-size:.85rem;display:flex;justify-content:space-between;gap:.5rem}
+.tile-sub b{color:var(--ink);font-family:var(--display)}
+.tile .bar,.msrow .bar{flex:none;width:100%;min-width:0}
+.msrows{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.8rem}
+.msrow{display:flex;flex-direction:column;gap:.4rem;background:var(--desk);border:0;border-radius:14px;padding:.85rem 1rem;text-align:left;color:inherit;cursor:pointer}
+.msrow:hover,.msrow:focus-visible{box-shadow:0 8px 18px rgba(10,14,22,.14)}
+.msrow-top{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem}
+.msrow-top b{font:800 1.05rem/1.2 var(--display)}
+.msrow-top span{font:700 1.05rem var(--display);color:var(--gold)}
+.msrow small{color:var(--muted);font-size:.83rem}
+.home-empty{color:var(--muted);margin:0}
+@media (max-width:760px){ .hero{grid-template-columns:1fr} .fan{order:-1;height:210px} .home-row{grid-template-columns:1fr} }
+@media (max-width:540px){
+  .home{gap:1.5rem}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+  .tile{padding:.7rem .7rem .8rem;border-radius:14px}
+  .stack{height:112px}
+  .stack > *{width:68px}
+  .tile-name{font-size:.95rem}
+  .tile-sub{font-size:.78rem}
+}
 .ins-head h2,.grid-title{font:800 1.25rem/1.2 var(--display);margin:0 0 .75rem}
 .grid-title{margin-top:.5rem}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:.9rem}
@@ -251,7 +337,7 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
     <a class="btn light" href="./" id="ownBinder">Open my own binder</a>
   </div>
   <header>
-    <h1>PYB’s TCG Collection</h1>
+    <h1><button class="home-link" id="homeBtn" title="Home">PYB’s TCG Collection</button></h1>
     <nav class="cats" id="cats" aria-label="Category"></nav>
     <form class="add" id="addForm">
       <input id="artistInput" list="artistList" placeholder="Add an artist…" autocomplete="off" aria-label="Artist name">
@@ -890,7 +976,7 @@ function activeArtist(){ return state.artists.find(a => akey(a) === state.active
 // The list on screen: the chosen artist, or the EX category.
 function activePoke(){ return state.pokemon.find(p => pkey(p) === state.activePoke) || null; }
 function activeMs(){ return state.masterSets.find(m => mkey(m) === state.activeMs) || null; }
-function activeList(){ return fixedList(state.cat) || (state.cat === "poke" ? activePoke() : state.cat === "ms" ? activeMs() : activeArtist()); }
+function activeList(){ if (state.cat === "home") return null; return fixedList(state.cat) || (state.cat === "poke" ? activePoke() : state.cat === "ms" ? activeMs() : activeArtist()); }
 function isShowing(a){ const cur = activeList(); return !!cur && lkey(cur) === lkey(a); }
 // Cards in a list; for EX, narrowed to the chosen sub-tab (All / EX / Mega EX).
 function cardsOf(a, sub = state.exSub){
@@ -930,15 +1016,16 @@ function setName(a, c){ return c.setName || state.details[ckey(cardLang(a, c), c
 function renderCats(){
   $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Full Arts"], ["ms", "Master Sets"]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
-  document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top"); // no add box there
+  document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top" || state.cat === "home"); // no add box there
+  document.body.classList.toggle("cat-home", state.cat === "home");
   document.body.classList.toggle("cat-ms", state.cat === "ms"); // master sets: no language menu
-  document.body.classList.toggle("no-tabs", isFixedCat(state.cat)); // EX, Full Arts, Most valuable: no sub-tabs to show
+  document.body.classList.toggle("no-tabs", isFixedCat(state.cat) || state.cat === "home"); // EX, Full Arts, Most valuable, home: no sub-tabs
   $("total").classList.toggle("on", state.cat === "top");
 }
 
 function renderTabs(){
   renderCats();
-  if (drag) return; // don't redraw tabs mid-drag; endDrag redraws them
+  if (drag || state.cat === "home") return; // don't redraw tabs mid-drag (endDrag redraws them); home has none
   if (state.cat === "top" || state.cat === "fa"){
     const a = FIXED[state.cat], cards = cardsOf(a);
     const [, tip] = cards ? pctLabel(ownedCount(a), cards.length) : ["…", "Loading…"];
@@ -1000,6 +1087,8 @@ function render(){
   renderTabs();
   renderTotal();
   const a = activeList(), m = $("main"), tb = $("toolbar");
+  if (state.cat === "home"){ tb.hidden = true; renderHome(); return; }
+  homeHtml = "";
   if (!a){
     tb.hidden = true;
     m.innerHTML = state.cat === "ms" ? `<div class="empty"><h2>Start a master set</h2>
@@ -1631,6 +1720,121 @@ function fitTopbar(){
 new ResizeObserver(fitTopbar).observe(topbar);
 addEventListener("resize", fitTopbar);
 
+// ----- Homepage -----
+// Opened by clicking the title (and shown when the site opens): your best cards, your favorite artists and
+// Pokémon, the cards where the two meet, and master-set progress. Clicking a card you own opens its price
+// pop-up; anything else opens its tab.
+let homeHtml = "";
+const usd = p => !p ? 0 : p.c === "USD" ? p.v : p.v * 1.1; // for ranking only (euros roughly in dollars)
+const cardValue = (a, c) => usd(priceOf(a, c)?.p);
+function homePic(a, c){
+  const pic = cardImages(c, cardLang(a, c));
+  return pic ? `<img loading="lazy" src="${esc(pic.small)}" alt="" onerror="homeNoPicture(this)">` : `<span class="noimg">${esc(c.name)}</span>`;
+}
+function homeNoPicture(img){ img.replaceWith(Object.assign(document.createElement("span"), { className: "noimg", textContent: img.closest("[title]")?.title || "" })); }
+const cardRef = (a, c) => `data-home-card="${esc(lkey(a) + "|" + cardLang(a, c) + "|" + c.id)}"`;
+function homeCard(a, c, attrs = ""){
+  return `<button class="fc" ${cardRef(a, c)} title="${esc(c.name)}" ${attrs}>${homePic(a, c)}</button>`;
+}
+// A list's owned cards, most valuable first, then (to fill a stack of three) cards still missing.
+function listShowcase(a){
+  const cards = (cardsOf(a) || []).filter(c => cardImages(c, cardLang(a, c)));
+  const owned = cards.filter(c => isOwned(a, c)).sort((x, y) => cardValue(a, y) - cardValue(a, x));
+  return [...owned.map(c => ({ c, own: true })), ...cards.filter(c => !isOwned(a, c)).slice(0, 3).map(c => ({ c, own: false }))].slice(0, 3);
+}
+function listTile(a, cat){
+  const cards = cardsOf(a), have = cards ? ownedCount(a) : 0, pct = cards?.length ? Math.round(have / cards.length * 100) : 0;
+  const shown = cards ? listShowcase(a) : [];
+  return `<button class="tile" data-go="${cat}" data-key="${esc(lkey(a))}">
+    <div class="stack n${shown.length}">${shown.map(x => `<span class="${x.own ? "" : "dim"}">${homePic(a, x.c)}</span>`).join("")}</div>
+    <span class="tile-name">${esc(a.name)}${langLabel(a.lang)}</span>
+    <span class="tile-sub">${cards ? `<span><b>${have}</b> of ${cards.length} owned</span><span>${pct}%</span>` : "<span>Loading…</span>"}</span>
+    <span class="bar"><span style="width:${pct}%"></span></span></button>`;
+}
+function renderHome(){
+  const owned = ownedEverywhere(), T = TOP_LIST;
+  const ranked = owned.filter(c => cardImages(c, c.lang)).sort((x, y) => cardValue(T, y) - cardValue(T, x));
+  const total = sumValue(owned.map(c => priceOf(T, c)));
+  // the fan: your five most valuable cards
+  const FAN = [{ x: "-88%", y: "10px", r: "-14deg" }, { x: "-44%", y: "-2px", r: "-7deg" }, { x: "0%", y: "-10px", r: "0deg" }, { x: "44%", y: "-2px", r: "7deg" }, { x: "88%", y: "10px", r: "14deg" }];
+  const five = ranked.slice(0, 5), order = [3, 1, 0, 2, 4].filter(i => i < five.length); // best card in the middle
+  const fan = five.length ? order.map((ci, pos) => { const f = FAN[pos + Math.floor((5 - order.length) / 2)];
+      return homeCard(T, five[ci], `style="--x:${f.x};--y:${f.y};--r:${f.r};z-index:${5 - Math.abs(2 - pos)}"`); }).join("")
+    : `<div class="fan-empty">Mark some cards as owned and your best ones show up here.</div>`;
+  // card of the day: one of your cards, a different one each day
+  const day = Math.floor(Date.now() / 86400000), pick = ranked.length ? ranked[(day * 7919) % ranked.length] : null;
+  // where favorites meet: cards in both an artist tab and a Pokémon tab
+  const byArtist = new Map();
+  state.artists.forEach(a => (cardsOf(a) || []).forEach(c => { const k = ckey(cardLang(a, c), c.id); if (!byArtist.has(k)) byArtist.set(k, a.name); }));
+  const cross = new Map();
+  state.pokemon.forEach(p => (cardsOf(p) || []).forEach(c => { const k = ckey(cardLang(p, c), c.id);
+    if (byArtist.has(k) && !cross.has(k)) cross.set(k, { a: p, c, artist: byArtist.get(k), own: isOwned(p, c) }); }));
+  const meet = [...cross.values()].sort((x, y) => (y.own - x.own) || (cardValue(y.a, y.c) - cardValue(x.a, x.c)));
+  const meetOwned = meet.filter(x => x.own).length;
+  const msInfo = state.masterSets.map(m => { const cards = cardsOf(m); if (!cards) return { m };
+    const have = ownedCount(m), left = cards.filter(c => !isOwned(m, c)).reduce((t, c) => t + (c.price || 0), 0);
+    return { m, have, all: cards.length, pct: cards.length ? Math.round(have / cards.length * 100) : 0, left }; });
+  const html = `<div class="home">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PYB’s TCG Collection</p>
+        <h2>Welcome back to your binder</h2>
+        <p class="lede">${state.artists.length ? `Following <b>${state.artists.length}</b> artist${state.artists.length === 1 ? "" : "s"}` : "No artists yet"}${state.pokemon.length ? ` and <b>${state.pokemon.length}</b> Pokémon` : ""}${state.masterSets.length ? `, chasing <b>${state.masterSets.length}</b> master set${state.masterSets.length === 1 ? "" : "s"}` : ""}.</p>
+        <div class="hero-stats">
+          <div class="hero-stat"><b>${total}</b><span>Collection value</span></div>
+          <div class="hero-stat"><b>${owned.length}</b><span>Cards owned</span></div>
+          <div class="hero-stat"><b>${ranked[0] ? money(cardValue(T, ranked[0]), "USD") : "–"}</b><span>Top card${ranked[0] ? ": " + esc(ranked[0].name) : ""}</span></div>
+        </div>
+        <div class="hero-cta"><button class="btn" data-go="top">See my most valuable</button>${state.masterSets.length ? `<button class="btn light" data-go="ms">Master sets</button>` : ""}</div>
+      </div>
+      <div class="fan">${fan}</div>
+    </section>
+    <div class="home-row">
+      <section class="panel">
+        <div class="hsec"><h3>Card of the day</h3></div>
+        ${pick ? `<div class="spot">${homeCard(T, pick)}<div class="spot-info"><b>${esc(pick.name)}</b><span>${esc(setName(T, pick))}${pick.num ? " #" + esc(pick.num) : ""}</span>
+          ${pick.vlabel || state.details[ckey(pick.lang, pick.id)]?.r ? `<span>${esc(pick.vlabel || state.details[ckey(pick.lang, pick.id)].r)}</span>` : ""}
+          <span class="price">${(p => p ? money(p.v, p.c) : "")(priceOf(T, pick)?.p)}</span></div></div>`
+        : `<p class="home-empty">Your cards will take turns here, one each day.</p>`}
+      </section>
+      <section class="panel">
+        <div class="hsec"><h3>Where your favorites meet</h3><p>${meet.length ? `Your artists drawing your Pokémon · <b>${meetOwned}</b> of ${meet.length} owned` : ""}</p></div>
+        ${meet.length ? `<div class="strip">${meet.slice(0, 30).map(x => `<div class="mini ${x.own ? "own" : ""}">${homeCard(x.a, x.c)}<b>${esc(x.c.name)}</b><span>${esc(x.artist)}</span></div>`).join("")}</div>`
+        : `<p class="home-empty">${state.artists.length && state.pokemon.length ? "None of your Pokémon have cards by your artists yet (or they’re still loading)." : "Add favorite artists and Pokémon to see the cards where they overlap."}</p>`}
+      </section>
+    </div>
+    ${state.artists.length ? `<section><div class="hsec"><h3>Favorite artists</h3><p>Your best card from each, front and center</p></div>
+      <div class="tiles">${state.artists.map(a => listTile(a, "artists")).join("")}</div></section>` : ""}
+    ${state.pokemon.length ? `<section><div class="hsec"><h3>Favorite Pokémon</h3></div>
+      <div class="tiles">${state.pokemon.map(p => listTile(p, "poke")).join("")}</div></section>` : ""}
+    ${msInfo.length ? `<section><div class="hsec"><h3>Master sets</h3></div><div class="msrows">${msInfo.map(x => `<button class="msrow" data-go="ms" data-key="${esc(mkey(x.m))}">
+        <span class="msrow-top"><b>${esc(x.m.name)}</b><span>${x.all ? x.pct + "%" : ""}</span></span>
+        <span class="bar"><span style="width:${x.pct || 0}%"></span></span>
+        <small>${x.all ? `${x.have} of ${x.all} cards${x.left ? ` · about ${money(x.left, "USD")} to complete` : ""}` : "Loading…"}</small></button>`).join("")}</div></section>` : ""}
+  </div>`;
+  if (html === homeHtml) return; // nothing changed (render runs often while prices load)
+  const strip = $("main").querySelector(".strip"), scroll = strip?.scrollLeft || 0;
+  homeHtml = html; $("main").innerHTML = html;
+  const ns = $("main").querySelector(".strip"); if (ns) ns.scrollLeft = scroll;
+}
+function goTo(cat, key){
+  picker.q = "";
+  state.cat = cat; if (key) setActiveKey(key);
+  ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
+  updateAddBox(); loadArtist(activeList());
+}
+$("homeBtn").addEventListener("click", () => { if (state.cat !== "home") goTo("home"); else window.scrollTo({ top: 0, behavior: "smooth" }); });
+$("main").addEventListener("click", e => {
+  if (state.cat !== "home") return;
+  const g = e.target.closest("[data-go]"); if (g){ goTo(g.dataset.go, g.dataset.key); return; }
+  const h = e.target.closest("[data-home-card]"); if (!h) return;
+  const [lk, lang, ...rest] = h.dataset.homeCard.split("|"), id = rest.join("|");
+  const a = lk === lkey(TOP_LIST) ? TOP_LIST : allLists().find(x => lkey(x) === lk); if (!a) return;
+  const c = (cardsOf(a) || []).find(x => x.id === id && cardLang(a, x) === lang); if (!c) return;
+  if (isOwned(a, c) || viewOnly) openPriceHistory(a, c);
+  else goTo(a.kind === "poke" ? "poke" : a.kind === "ms" ? "ms" : a.kind in FIXED ? a.kind : "artists", a.kind in FIXED ? null : lk);
+});
+
 // ----- Cloud backup -----
 // The backup is kept in a secret gist in the owner's GitHub account, using a token (gist access only) they
 // paste once per device. Every change is saved a few seconds later; GitHub keeps each save as a revision.
@@ -1819,7 +2023,7 @@ async function openShared(code){
             masterSets: (d.m || []).map(([name, groups]) => ({ name, groups, lang: "tcgp", kind: "ms" })),
             fullArts: (d.f || []).map(([lang, id, vid, tp]) => ({ lang, id, ...(vid ? { vid } : {}), ...(tp ? { tp } : {}) })),
             versions: Object.fromEntries(Array.isArray(d.w) ? d.w : []),
-            cat: d.c === "sir" ? "fa" : ["ex", "poke", "fa", "top", "ms"].includes(d.c) ? d.c : "artists", exSub: "all" };
+            cat: d.c === "sir" ? "fa" : ["ex", "poke", "fa", "top", "ms", "home"].includes(d.c) ? d.c : "artists", exSub: "all" };
   state.active = state.artists[0] ? akey(state.artists[0]) : null;
   state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
   state.activeMs = state.masterSets[0] ? mkey(state.masterSets[0]) : null;
@@ -1836,7 +2040,7 @@ async function openShared(code){
   if (m){
     try { await openShared(m[1]); }
     catch(e){ alert("This share link looks incomplete or broken. Ask for the link again, and make sure you copy all of it."); }
-  }
+  } else state.cat = "home";
   loadNames("en");
   render();
   renderCloud();
