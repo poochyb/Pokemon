@@ -422,13 +422,22 @@ if (!state.masterSets){ // first time: start with the 30th Celebration master se
   state.masterSets = [{ name: "30th Celebration", groups: [24722, 24837] }];
   state.activeMs = "ms|24722,24837";
 }
-// Master sets the owner asked to have added, each added once (so removing one later sticks).
+// Master sets the owner asked to have added, each added once (so removing one later sticks). The list of
+// ones already added travels with backups and the cloud backup; with cloud backup on, sets are added only
+// after the cloud copy is checked, so a set removed on one device isn't brought back by another.
 state.seeded = state.seeded || [];
-[["Chaos Rising", [24655]], ["Shiny Vault", [2781, 2594]]].forEach(([name, groups]) => {
-  if (state.seeded.includes(name)) return;
-  state.seeded.push(name);
-  if (!state.masterSets.some(m => m.groups.join() === groups.join())) state.masterSets.push({ name, groups });
-});
+const SEED_SETS = [["Chaos Rising", [24655]], ["Shiny Vault", [2781, 2594]]];
+function seedMasterSets(){
+  let added = false;
+  SEED_SETS.forEach(([name, groups]) => {
+    if (state.seeded.includes(name)) return;
+    state.seeded.push(name);
+    if (!state.masterSets.some(m => m.groups.join() === groups.join())){ state.masterSets.push({ name, groups, lang: "tcgp", kind: "ms" }); added = true; }
+  });
+  return added;
+}
+const cloudIsOn = (() => { try { return !!JSON.parse(localStorage.getItem("artistBinder.cloud.v1"))?.gist; } catch(e){ return false; } })();
+if (!cloudIsOn) seedMasterSets();
 state.masterSets = state.masterSets.map(m => ({ name: m.name, groups: m.groups, lang: "tcgp", kind: "ms" }));
 state.activeMs = state.activeMs || (state.masterSets[0] ? mkey(state.masterSets[0]) : null);
 // Pokémon category: one sub-tab per Pokémon you add (like artists).
@@ -1564,7 +1573,7 @@ $("zoomClose").addEventListener("click", () => $("zoomDlg").close());
 $("zoomDlg").addEventListener("click", e => { if (e.target === $("zoomDlg")) $("zoomDlg").close(); });
 
 // What a backup holds (the Backup file and the cloud backup use the same format).
-const backupData = () => ({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, masterSets: state.masterSets.map(x => ({ name: x.name, groups: x.groups })), versions: state.versions, owned: state.owned });
+const backupData = () => ({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, masterSets: state.masterSets.map(x => ({ name: x.name, groups: x.groups })), versions: state.versions, seeded: state.seeded, owned: state.owned });
 function applyBackup(d){
   if (!Array.isArray(d?.artists) || !d.owned || typeof d.owned !== "object") throw new Error("not a backup");
   state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
@@ -1573,6 +1582,7 @@ function applyBackup(d){
   state.fullArts = Array.isArray(d.fullArts) ? d.fullArts : [];
   if (Array.isArray(d.masterSets)){ state.masterSets = d.masterSets.map(x => ({ name: x.name, groups: x.groups, lang: "tcgp", kind: "ms" })); state.activeMs = state.masterSets[0] ? mkey(state.masterSets[0]) : null; }
   state.versions = d.versions && typeof d.versions === "object" ? d.versions : {};
+  if (Array.isArray(d.seeded)) state.seeded = [...new Set([...state.seeded, ...d.seeded])];
   state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
   save(); render(); allLists().forEach(loadArtist);
 }
@@ -1616,7 +1626,7 @@ const CLOUD_KEY = "artistBinder.cloud.v1", GIST_FILE = "pyb-tcg-collection.json"
 let cloud = (() => { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)) || {}; } catch(e){ return {}; } })();
 const keepCloud = () => { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cloud)); } catch(e){} };
 const textHash = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = (h * 33 ^ t.charCodeAt(i)) >>> 0; return h.toString(36) + t.length; };
-const collectionHash = () => textHash(JSON.stringify(backupData()));
+const collectionHash = () => textHash(JSON.stringify({ ...backupData(), seeded: undefined })); // (seeded is synced separately below)
 async function gh(path, opts = {}, token = cloud.token){
   const r = await fetch("https://api.github.com" + path, { ...opts, cache: "no-store",
     headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token, ...(opts.body ? { "Content-Type": "application/json" } : {}) } });
@@ -1663,7 +1673,7 @@ async function cloudSync(){
       if (useRemote){
         applyBackup(remote);
         Object.assign(cloud, { hash: collectionHash(), synced: remote.savedAt });
-      } else if (localChanged || !remote){
+      } else if (localChanged || !remote || state.seeded.some(x => !(remote.seeded || []).includes(x))){ // also share which sets were added
         const savedAt = Date.now(), h = collectionHash();
         await gh(`/gists/${cloud.gist}`, { method: "PATCH", body: gistBody(backupData(), savedAt) });
         Object.assign(cloud, { hash: h, synced: savedAt });
@@ -1816,7 +1826,8 @@ async function openShared(code){
   }
   loadNames("en");
   render();
-  renderCloud(); cloudSync();
+  renderCloud();
+  if (cloudIsOn && !viewOnly) cloudSync().finally(() => { if (seedMasterSets()){ save(); render(); allLists().forEach(loadArtist); } });
   updateAddBox();
   loadArtist(activeList());
   allLists().forEach(loadArtist);
