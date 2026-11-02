@@ -11,6 +11,14 @@ Two browser apps for Pokémon Trading Card Game collecting. There's nothing to i
 Pick Pokémon card artists and see every card they illustrated, using data from TCGdex.
 Tap a card to mark it Owned or Missing and track your progress per artist.
 
+## Drops near me (`drops.html`)
+
+https://poochyb.github.io/Pokemon/drops.html — Pokémon card drops and restocks around Yorba Linda:
+new Reddit posts that mention nearby towns, vending machines or store restocks; the official
+Pokémon vending machines within your chosen distance (with directions); a log of what you saw at
+each machine; a chart of which days and times restocks get reported; and one-tap searches for
+Instagram, Facebook, X and TikTok.
+
 ## Collection Tracker (`collection.html`)
 
 A simple tracker for every card you own, with prices.
