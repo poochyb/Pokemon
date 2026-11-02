@@ -1,0 +1,230 @@
+{
+ "updated": "2026-11-02T23:07:20Z",
+ "home": {
+  "name": "Yorba Linda, CA",
+  "lat": 33.8886,
+  "lng": -117.8131
+ },
+ "machines": [
+  {
+   "id": "recXMIPEoagEOvp6X",
+   "name": "Q02467",
+   "lat": 33.86604,
+   "lng": -117.8050396,
+   "retailer": "Stater Bros. Markets",
+   "street": "1741 N Kellogg Dr",
+   "city": "Anaheim",
+   "zip": "92807",
+   "state": "CA"
+  },
+  {
+   "id": "rec5blRfYQlC6gkJE",
+   "name": "Q02419",
+   "lat": 33.9058116,
+   "lng": -117.8432403,
+   "retailer": "Stater Bros. Markets",
+   "street": "1111 E Imperial Hwy",
+   "city": "Placentia",
+   "zip": "92870",
+   "state": "CA"
+  },
+  {
+   "id": "rec4zXhbbN0L8ckFR",
+   "name": "Q01240",
+   "lat": 33.8932942,
+   "lng": -117.7757264,
+   "retailer": "Vons",
+   "street": "20445 Yorba Linda Blvd",
+   "city": "Yorba Linda",
+   "zip": "92886",
+   "state": "CA"
+  },
+  {
+   "id": "recbXYQ4jJO5tNMuk",
+   "name": "Q00695",
+   "lat": 33.8503336,
+   "lng": -117.7919409,
+   "retailer": "Vons",
+   "street": "5600 E Santa Ana Canyon Rd",
+   "city": "Anaheim",
+   "zip": "92807",
+   "state": "CA"
+  },
+  {
+   "id": "recpsM6oz49v6pBeY",
+   "name": "Q00332",
+   "lat": 33.8900282,
+   "lng": -117.8723507,
+   "retailer": "Albertsons",
+   "street": "1930 N Placentia Ave",
+   "city": "Fullerton",
+   "zip": "92831",
+   "state": "CA"
+  },
+  {
+   "id": "rec4BZqb2AhGmhhtw",
+   "name": "Q00591",
+   "lat": 33.8334022,
+   "lng": -117.8373269,
+   "retailer": "Vons",
+   "street": "2684 N Tustin St",
+   "city": "Orange",
+   "zip": "92865",
+   "state": "CA"
+  },
+  {
+   "id": "recgPPDqpFOzc8Ky1",
+   "name": "Q00478",
+   "lat": 33.849521,
+   "lng": -117.8903877,
+   "retailer": "Stater Bros. Markets",
+   "street": "1131 N State College Blvd",
+   "city": "Anaheim",
+   "zip": "92806",
+   "state": "CA"
+  },
+  {
+   "id": "recCqrgG7HYTIJQRB",
+   "name": "Q02439",
+   "lat": 33.8982987,
+   "lng": -117.9110777,
+   "retailer": "Stater Bros. Markets",
+   "street": "1040 E Bastanchury Rd",
+   "city": "Fullerton",
+   "zip": "92835",
+   "state": "CA"
+  },
+  {
+   "id": "recb5yLQZMWdOHsDj",
+   "name": "Q00491",
+   "lat": 33.8313159,
+   "lng": -117.8885566,
+   "retailer": "Albertsons",
+   "street": "810 S State College Blvd",
+   "city": "Anaheim",
+   "zip": "92806",
+   "state": "CA"
+  },
+  {
+   "id": "recgZj5vEDh1Hp9hr",
+   "name": "Q01726",
+   "lat": 33.8814007,
+   "lng": -117.9252663,
+   "retailer": "Ralphs",
+   "street": "1121 N Harbor Blvd",
+   "city": "Fullerton",
+   "zip": "92832",
+   "state": "CA"
+  },
+  {
+   "id": "recgAdaY6K92c9jbZ",
+   "name": "Q01270",
+   "lat": 33.7890568,
+   "lng": -117.8177741,
+   "retailer": "Stater Bros. Markets",
+   "street": "3325 E Chapman Ave",
+   "city": "Orange",
+   "zip": "92869",
+   "state": "CA"
+  },
+  {
+   "id": "recBhUAkN81Kc8JOh",
+   "name": "Q01142",
+   "lat": 33.7918258,
+   "lng": -117.7632809,
+   "retailer": "Albertsons",
+   "street": "8440 E Chapman Ave",
+   "city": "Orange",
+   "zip": "92869",
+   "state": "CA"
+  },
+  {
+   "id": "recYuZ4LT1L8dJVRQ",
+   "name": "Q01668",
+   "lat": 33.8588902,
+   "lng": -117.9410169,
+   "retailer": "Food 4 Less",
+   "street": "914 W Orangethorpe Ave",
+   "city": "Fullerton",
+   "zip": "92832",
+   "state": "CA"
+  },
+  {
+   "id": "rech9s6D7OozSApJ8",
+   "name": "Q00519",
+   "lat": 33.9614709,
+   "lng": -117.6955129,
+   "retailer": "Albertsons",
+   "street": "15970 Los Serranos Country Club Dr",
+   "city": "Chino Hills",
+   "zip": "91709",
+   "state": "CA"
+  },
+  {
+   "id": "recrxalqCEnsRnyLx",
+   "name": "Q01827",
+   "lat": 34.0016731,
+   "lng": -117.7342238,
+   "retailer": "Albertsons",
+   "street": "3255 Grand Ave",
+   "city": "Chino Hills",
+   "zip": "91709",
+   "state": "CA"
+  },
+  {
+   "id": "recPRGzdbCqOFwnde",
+   "name": "Q00583",
+   "lat": 33.9385325,
+   "lng": -117.9663613,
+   "retailer": "Albertsons",
+   "street": "1800 W Whittier Blvd",
+   "city": "La Habra",
+   "zip": "90631",
+   "state": "CA"
+  },
+  {
+   "id": "recGRt1WlRZ5phcxs",
+   "name": "Q00330",
+   "lat": 33.8019412,
+   "lng": -117.9378978,
+   "retailer": "Food 4 Less",
+   "street": "1616 W Katella Ave",
+   "city": "Anaheim",
+   "zip": "92802",
+   "state": "CA"
+  },
+  {
+   "id": "rec2DMNRZYLqjjZfV",
+   "name": "Q01236",
+   "lat": 34.0263055,
+   "lng": -117.7615344,
+   "retailer": "WinCo Foods",
+   "street": "90 Rio Rancho Rd",
+   "city": "Pomona",
+   "zip": "91766",
+   "state": "CA"
+  },
+  {
+   "id": "recK7xlwbA0O64771",
+   "name": "Q00348",
+   "lat": 33.7452048,
+   "lng": -117.8128436,
+   "retailer": "Albertsons",
+   "street": "13270 Newport Ave",
+   "city": "Tustin",
+   "zip": "92780",
+   "state": "CA"
+  },
+  {
+   "id": "recal9QevIGvE4b2g",
+   "name": "Q02347",
+   "lat": 34.0348379,
+   "lng": -117.7489342,
+   "retailer": "Food 4 Less",
+   "street": "2090 S Garey Ave",
+   "city": "Pomona",
+   "zip": "91766",
+   "state": "CA"
+  }
+ ]
+}

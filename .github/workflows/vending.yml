@@ -1,0 +1,34 @@
+name: Update vending machine list
+
+# Copies the official Pokémon TCG vending machines near home (vending.pokemon.com) into
+# vending.json for the Drops page. Only commits when a machine was added, moved or removed.
+on:
+  schedule:
+    - cron: "41 14 * * *"   # daily, early morning in California
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prices   # same group as the price job so the two never push at the same moment
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node scripts/build-vending.mjs
+      - name: Commit vending.json if it changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add vending.json
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Update Pokémon vending machine list"
+          for i in 1 2 3; do git push && exit 0; git pull --rebase -X theirs || { git rebase --abort; git reset --hard origin/$GITHUB_REF_NAME; exit 0; }; done
+          exit 1
