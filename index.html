@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PYB’s TCG Collection</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"%3E%3Cdefs%3E%3ClinearGradient id="h" x1="0" y1="0" x2="1" y2="1"%3E%3Cstop offset="0" stop-color="%235FD3E6"/%3E%3Cstop offset=".35" stop-color="%239B8CFF"/%3E%3Cstop offset=".65" stop-color="%23FF8FC8"/%3E%3Cstop offset="1" stop-color="%23F6C453"/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform="rotate%28-12 20 20%29"%3E%3Crect x="8.5" y="3.5" width="24" height="32" rx="3.5" fill="%23FFF8E6"/%3E%3Crect x="10" y="5" width="21" height="29" rx="2.6" fill="url%28%23h%29"/%3E%3Crect x="13" y="25" width="15" height="6" rx="1.3" fill="%23fff" opacity=".55"/%3E%3C/g%3E%3Cpath d="M32 2.5l1.3 4.2 4.2 1.3-4.2 1.3L32 13.5l-1.3-4.2L26.5 8l4.2-1.3z" fill="%23F0B743"/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -32,6 +33,14 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .65rem;padding:.
 h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:nowrap}
 .home-link{border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;padding:.2rem .35rem;margin:0 -.35rem;border-radius:8px;cursor:pointer}
 .home-link:hover{background:rgba(255,255,255,.1)}
+/* Holo card logo */
+.home-link{display:inline-flex;align-items:center;gap:.5rem;text-align:left}
+.logo-mark{flex:none;display:block;overflow:visible}
+.logo-words{display:flex;flex-direction:column;line-height:1}
+.logo-t1{font:800 1.3rem/1 var(--display);letter-spacing:-.02em}
+.logo-t2{font:700 .58rem/1 var(--body);letter-spacing:.22em;opacity:.85;margin-top:.2rem}
+.logo-spark{transform-origin:32px 8px;transition:transform .3s}
+.home-link:hover .logo-spark{transform:rotate(45deg) scale(1.15)}
 body.cat-home .home-link{color:var(--gold)}
 .add{display:flex;gap:.4rem;flex:0 1 auto;min-width:0}
 .add input{flex:0 1 10rem;width:10rem;min-width:0;padding:.35rem .7rem;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
@@ -337,7 +346,22 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
     <a class="btn light" href="./" id="ownBinder">Open my own binder</a>
   </div>
   <header>
-    <h1><button class="home-link" id="homeBtn" title="Home">PYB’s TCG Collection</button></h1>
+    <h1><button class="home-link" id="homeBtn" title="Home" aria-label="PYB’s TCG Collection (home)">
+    <svg class="logo-mark" width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+      <defs>
+        <linearGradient id="logoHolo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5FD3E6"/><stop offset=".35" stop-color="#9B8CFF"/><stop offset=".65" stop-color="#FF8FC8"/><stop offset="1" stop-color="#F6C453"/></linearGradient>
+        <linearGradient id="logoShine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <clipPath id="logoClip"><rect x="10" y="5" width="21" height="29" rx="2.6"/></clipPath>
+      </defs>
+      <g transform="rotate(-12 20 20)">
+        <rect x="8.5" y="3.5" width="24" height="32" rx="3.5" fill="#FFF8E6"/>
+        <rect x="10" y="5" width="21" height="29" rx="2.6" fill="url(#logoHolo)"/>
+        <rect class="logo-shine" x="2" y="12" width="40" height="6" fill="url(#logoShine)" transform="rotate(-35 20 20)" clip-path="url(#logoClip)"/>
+        <rect x="13" y="25" width="15" height="6" rx="1.3" fill="#fff" opacity=".55"/>
+      </g>
+      <path class="logo-spark" d="M32 2.5l1.3 4.2 4.2 1.3-4.2 1.3L32 13.5l-1.3-4.2L26.5 8l4.2-1.3z" fill="#FFE9A8"/>
+    </svg>
+    <span class="logo-words"><span class="logo-t1">PYB’s</span><span class="logo-t2">TCG COLLECTION</span></span></button></h1>
     <nav class="cats" id="cats" aria-label="Category"></nav>
     <form class="add" id="addForm">
       <input id="artistInput" list="artistList" placeholder="Add an artist…" autocomplete="off" aria-label="Artist name">
