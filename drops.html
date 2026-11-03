@@ -141,6 +141,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.7rem}
 .leaflet-popup-content{font:14px/1.4 var(--body);margin:.6rem .8rem}
 .leaflet-popup-content b{display:block}
 .map-fallback{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);text-align:center;padding:1rem}
+@media (prefers-color-scheme: dark){ #map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6)} }
 @media (max-width:760px){ .nearmap{grid-template-columns:1fr} #map{height:300px} }
 </style>
 </head>
@@ -574,7 +575,6 @@ function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false
 // ---------- map of the machines within 5 miles ----------
 let here = null;            // {lat, lng, acc} from the phone/computer's location, when allowed
 let map = null, tiles = null, layer = null, lastSet = "", watchId = null;
-const darkQ = matchMedia("(prefers-color-scheme: dark)");
 const origin = () => here || HOME;
 const directions = m => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(shortStore(m.retailer) + ", " + m.street + ", " + m.city + ", " + m.state + " " + m.zip)}`;
 function machinesNearOrigin(){
@@ -584,9 +584,9 @@ function machinesNearOrigin(){
 function setTiles(){
   if (!map) return;
   if (tiles) tiles.remove();
-  tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${darkQ.matches ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, {
-    subdomains: "abcd", maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
+  // OpenStreetMap's own street map: free, no key (CARTO's tiles now need one). Dark mode darkens it with CSS.
+  tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
 }
 function renderMap(){
   const five = machinesNearOrigin();   // every machine within 5 miles, closest first
@@ -603,7 +603,6 @@ function renderMap(){
   if (!map){
     map = L.map("map", { scrollWheelZoom: false, zoomControl: true }).setView([HOME.lat, HOME.lng], 12);
     setTiles();
-    darkQ.addEventListener?.("change", setTiles);
     layer = L.layerGroup().addTo(map);
   }
   layer.clearLayers();
