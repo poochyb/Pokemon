@@ -118,7 +118,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.7rem}
 @media (max-width:700px){ .topbar{position:static} section{scroll-margin-top:.5rem} }
 @media (max-width:560px){ .bar{grid-template-columns:5.5rem 1fr 1.8rem} h1{font-size:1.05rem} }
 
-/* Map of the 5 closest machines */
+/* Map of the machines within 5 miles */
 .nearmap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:.8rem;margin-bottom:1rem}
 #map{height:340px;border-radius:12px;border:1px solid var(--line);background:var(--desk);z-index:0}
 .maptop{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .7rem;margin-bottom:.6rem}
@@ -179,8 +179,8 @@ footer .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.7rem}
       <span class="locnote" id="locNote"></span>
     </div>
     <div class="nearmap">
-      <div id="map" role="region" aria-label="Map of the closest vending machines, within 5 miles"></div>
-      <div><h3 style="margin-top:0">Closest to <span id="originName">Yorba Linda</span> <span class="note">(up to 5, within 5 miles)</span></h3><ol class="closest" id="closest"></ol></div>
+      <div id="map" role="region" aria-label="Map of the vending machines within 5 miles"></div>
+      <div><h3 style="margin-top:0">Closest to <span id="originName">Yorba Linda</span> <span class="note">(within 5 miles)</span></h3><ol class="closest" id="closest"></ol></div>
     </div>
     <h3>All machines within 5 miles</h3>
     <p class="sub" id="vendSub"></p>
@@ -570,15 +570,15 @@ $("importFile").addEventListener("change", async e => {
 // ---------- misc ----------
 let toastTimer;
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 4000); }
-// ---------- map of the 5 closest machines ----------
+// ---------- map of the machines within 5 miles ----------
 let here = null;            // {lat, lng, acc} from the phone/computer's location, when allowed
 let map = null, tiles = null, layer = null, lastSet = "", watchId = null;
 const darkQ = matchMedia("(prefers-color-scheme: dark)");
 const origin = () => here || HOME;
 const directions = m => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(shortStore(m.retailer) + ", " + m.street + ", " + m.city + ", " + m.state + " " + m.zip)}`;
-function closestFive(){
+function machinesNearOrigin(){
   const o = origin();
-  return machines.map(m => ({ m, mi: miles(o, m) })).filter(x => x.mi <= VEND_MI).sort((a, b) => a.mi - b.mi).slice(0, 5);
+  return machines.map(m => ({ m, mi: miles(o, m) })).filter(x => x.mi <= VEND_MI).sort((a, b) => a.mi - b.mi);
 }
 function setTiles(){
   if (!map) return;
@@ -588,7 +588,7 @@ function setTiles(){
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
 }
 function renderMap(){
-  const five = closestFive();
+  const five = machinesNearOrigin();   // every machine within 5 miles, closest first
   $("originName").textContent = here ? "you" : HOME.name;
   $("closest").innerHTML = five.map(({ m, mi }, i) => `<li tabindex="0" data-pin="${i}">
     <span class="pin-num"><span>${i + 1}</span></span>
@@ -615,7 +615,7 @@ function renderMap(){
       icon: L.divIcon({ className: "", html: `<span class="pin-num"><span>${i + 1}</span></span>`, iconSize: [26, 26], iconAnchor: [4, 26], popupAnchor: [9, -24] }) })
     .bindPopup(`<b>${i + 1}. ${esc(shortStore(m.retailer))} · ${esc(m.city)}</b>${esc(m.street)}<br>${mi.toFixed(1)} mi ${here ? "from you" : "from " + esc(HOME.name)}<br>
       <a href="${esc(directions(m))}" target="_blank" rel="noopener">Directions</a>`).addTo(layer));
-  // Re-frame the map only when the set of 5 changes (not every time your position wiggles).
+  // Re-frame the map only when the set of machines changes (not every time your position wiggles).
   const set = five.map(x => x.m.id).join() + (here ? "@" : "");
   if (set !== lastSet){
     lastSet = set;
