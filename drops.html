@@ -4,9 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drops Near Me</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"%3E%3Cdefs%3E%3ClinearGradient id="h" x1="0" y1="0" x2="1" y2="1"%3E%3Cstop offset="0" stop-color="%235FD3E6"/%3E%3Cstop offset=".35" stop-color="%239B8CFF"/%3E%3Cstop offset=".65" stop-color="%23FF8FC8"/%3E%3Cstop offset="1" stop-color="%23F6C453"/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform="rotate%28-12 20 20%29"%3E%3Crect x="8.5" y="3.5" width="24" height="32" rx="3.5" fill="%23FFF8E6"/%3E%3Crect x="10" y="5" width="21" height="29" rx="2.6" fill="url%28%23h%29"/%3E%3Crect x="13" y="25" width="15" height="6" rx="1.3" fill="%23fff" opacity=".55"/%3E%3C/g%3E%3Cpath d="M32 2.5l1.3 4.2 4.2 1.3-4.2 1.3L32 13.5l-1.3-4.2L26.5 8l4.2-1.3z" fill="%23F0B743"/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
 :root{
   --desk:#DCE3EC; --page:#F7F9FC; --ink:#1C2433; --muted:#5B6577; --line:#C6CFDB;
@@ -115,6 +118,30 @@ footer .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.7rem}
 .toast{position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);background:var(--cover);color:var(--cover-ink);padding:.5rem 1rem;border-radius:10px;z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.3);max-width:calc(100% - 2rem)}
 @media (max-width:700px){ .topbar{position:static} section{scroll-margin-top:.5rem} }
 @media (max-width:560px){ .bar{grid-template-columns:5.5rem 1fr 1.8rem} h1{font-size:1.05rem} }
+
+/* Map of the machines within 5 miles */
+.nearmap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:.8rem;margin-bottom:1rem}
+#map{height:340px;border-radius:12px;border:1px solid var(--line);background:var(--desk);z-index:0}
+.maptop{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .7rem;margin-bottom:.6rem}
+.maptop .locnote{color:var(--muted);font-size:.86rem;flex:1 1 14rem}
+.closest{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.4rem}
+.closest li{display:flex;gap:.6rem;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:.45rem .6rem;cursor:pointer}
+.closest li:hover,.closest li:focus-visible{border-color:var(--accent)}
+.closest .who{flex:1;min-width:0;font-size:.9rem;line-height:1.35}
+.closest .who b{display:block}
+.closest .who span{color:var(--muted)}
+.closest .mi{font:700 .95rem/1.2 var(--display);white-space:nowrap}
+.pin-num{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.6rem;height:1.6rem;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  background:var(--gold);color:#1C2433;font:800 .8rem/1 var(--display);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pin-num > span{transform:rotate(45deg)}
+.closest .pin-num{transform:none;border-radius:50%;border-color:transparent;box-shadow:none}
+.closest .pin-num > span{transform:none}
+.you-dot{width:18px;height:18px;border-radius:50%;background:#2F6FDE;border:3px solid #fff;box-shadow:0 0 0 2px rgba(47,111,222,.35),0 1px 4px rgba(0,0,0,.4)}
+.you-dot.home{background:var(--cover);border-radius:5px}
+.leaflet-popup-content{font:14px/1.4 var(--body);margin:.6rem .8rem}
+.leaflet-popup-content b{display:block}
+.map-fallback{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);text-align:center;padding:1rem}
+@media (max-width:760px){ .nearmap{grid-template-columns:1fr} #map{height:300px} }
 </style>
 </head>
 <body>
@@ -148,6 +175,15 @@ footer .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.7rem}
 
   <section id="vending">
     <h2>Official Pokémon vending machines</h2>
+    <div class="maptop">
+      <button class="btn" id="locBtn">📍 Use my location</button>
+      <span class="locnote" id="locNote"></span>
+    </div>
+    <div class="nearmap">
+      <div id="map" role="region" aria-label="Map of the vending machines within 5 miles"></div>
+      <div><h3 style="margin-top:0">Closest to <span id="originName">Yorba Linda</span> <span class="note">(within 5 miles)</span></h3><ol class="closest" id="closest"></ol></div>
+    </div>
+    <h3>All machines within 5 miles</h3>
     <p class="sub" id="vendSub"></p>
     <div class="machines" id="machines"></div>
     <p class="note">Tap what you saw when you visit a machine (“Just restocked”, “Has stock”, “Empty”). Your notes build the restock pattern below. They’re saved in this browser only, so use <b>Save my notes</b> at the bottom now and then.</p>
@@ -229,7 +265,9 @@ const REGION = /\borange county\b|\bthe oc\b|\bsocal\b|\bso ?cal\b|\bsouthern ca
 
 let machines = [];   // from vending.json
 const nearTowns = () => TOWNS.filter(t => t.d <= state.radius);
-const nearMachines = () => machines.filter(m => m.d <= state.radius);
+// Vending machines always stay within 5 miles (of home, or of you on the map). The distance menu only changes posts.
+const VEND_MI = 5;
+const nearMachines = () => machines.filter(m => m.d <= VEND_MI);
 
 // ---------- what a post is about ----------
 const POKE = /pok[eé]mon|\btcg\b|booster|\betb\b|elite trainer|pok[eé] ?ball|\bpkmn\b|prismatic|surging sparks|paldea|mega evolution|scarlet (&|and) violet|151\b.*(box|pack|bundle)/i;
@@ -258,7 +296,7 @@ function analyze(p){
   const region = REGION.test(text);
   const vend = VEND.test(text);
   const stores = STORES.filter(([, re]) => re.test(text)).map(([n]) => n);
-  const ms = machines.filter(m => {
+  const ms = nearMachines().filter(m => {
     const r = RETAILER_RE[m.retailer] || new RegExp("\\b" + m.retailer.split(" ")[0] + "\\b", "i");
     if (!r.test(text)) return false;
     return m.cityRe.test(text) || (m.key && new RegExp("\\b" + m.key + "\\b", "i").test(text));
@@ -404,7 +442,7 @@ function renderMachines(){
   const list = nearMachines().sort((a, b) => (state.fav.includes(b.id) - state.fav.includes(a.id)) || a.d - b.d);
   const posts = Object.values(cache.posts).map(p => ({ p, a: analyze(p) }));
   $("vendSub").textContent = machines.length
-    ? `${list.length} machine${list.length === 1 ? "" : "s"} within ${state.radius} miles of ${HOME.name}, closest first. ★ pins one to the top.`
+    ? `${list.length} machine${list.length === 1 ? "" : "s"} within ${VEND_MI} miles of ${HOME.name}, closest first. ★ pins one to the top.`
     : "Couldn’t load the machine list. Refresh the page to try again.";
   $("machines").innerHTML = list.map(m => {
     const logs = state.logs.filter(l => l.m === m.id).sort((a, b) => b.t - a.t);
@@ -424,7 +462,7 @@ function renderMachines(){
         ${restocks.length > 1 ? `<br>Restocks you’ve logged: ${restocks.slice(0, 5).map(l => `${dayName(l.t)} ${timeStr(l.t)}`).join(", ")}` : ""}</div>
       <div class="logrow">${Object.entries(KINDS).map(([k, l]) => `<button data-log="${m.id}" data-k="${k}">${l}</button>`).join("")}</div>
     </div>`;
-  }).join("") || (machines.length ? `<div class="empty">No machines within ${state.radius} miles. Pick a bigger distance at the top.</div>` : "");
+  }).join("") || (machines.length ? `<div class="empty">No machines within ${VEND_MI} miles.</div>` : "");
 }
 $("machines").addEventListener("click", e => {
   const f = e.target.closest("[data-fav]"), l = e.target.closest("[data-log]"), u = e.target.closest("[data-undo]"), mf = e.target.closest("[data-mfilter]");
@@ -533,7 +571,98 @@ $("importFile").addEventListener("change", async e => {
 // ---------- misc ----------
 let toastTimer;
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 4000); }
-function render(){ renderFeed(); renderMachines(); renderTimes(); renderSocial(); }
+// ---------- map of the machines within 5 miles ----------
+let here = null;            // {lat, lng, acc} from the phone/computer's location, when allowed
+let map = null, tiles = null, layer = null, lastSet = "", watchId = null;
+const darkQ = matchMedia("(prefers-color-scheme: dark)");
+const origin = () => here || HOME;
+const directions = m => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(shortStore(m.retailer) + ", " + m.street + ", " + m.city + ", " + m.state + " " + m.zip)}`;
+function machinesNearOrigin(){
+  const o = origin();
+  return machines.map(m => ({ m, mi: miles(o, m) })).filter(x => x.mi <= VEND_MI).sort((a, b) => a.mi - b.mi);
+}
+function setTiles(){
+  if (!map) return;
+  if (tiles) tiles.remove();
+  tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${darkQ.matches ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, {
+    subdomains: "abcd", maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
+}
+function renderMap(){
+  const five = machinesNearOrigin();   // every machine within 5 miles, closest first
+  $("originName").textContent = here ? "you" : HOME.name;
+  $("closest").innerHTML = five.map(({ m, mi }, i) => `<li tabindex="0" data-pin="${i}">
+    <span class="pin-num"><span>${i + 1}</span></span>
+    <div class="who"><b>${esc(shortStore(m.retailer))} · ${esc(m.city)}</b><span>${esc(m.street)}</span><br>
+      <a href="${esc(directions(m))}" target="_blank" rel="noopener">Directions</a></div>
+    <span class="mi">${mi.toFixed(1)} mi</span></li>`).join("") || `<li class="note">${machines.length ? `No machines within ${VEND_MI} miles of ${here ? "you" : esc(HOME.name)}.` : "No machines loaded yet."}</li>`;
+  if (typeof L === "undefined"){
+    $("map").innerHTML = `<div class="map-fallback">The map couldn’t load. Check your internet connection and refresh the page.</div>`;
+    return;
+  }
+  if (!map){
+    map = L.map("map", { scrollWheelZoom: false, zoomControl: true }).setView([HOME.lat, HOME.lng], 12);
+    setTiles();
+    darkQ.addEventListener?.("change", setTiles);
+    layer = L.layerGroup().addTo(map);
+  }
+  layer.clearLayers();
+  const o = origin();
+  L.marker([o.lat, o.lng], { title: here ? "You are here" : HOME.name, zIndexOffset: 1000,
+    icon: L.divIcon({ className: "", html: `<div class="you-dot${here ? "" : " home"}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) })
+    .bindPopup(here ? "<b>You are here</b>" : `<b>${esc(HOME.name)}</b>Tap “Use my location” to measure from where you are.`).addTo(layer);
+  if (here && here.acc > 60) L.circle([here.lat, here.lng], { radius: here.acc, color: "#2F6FDE", weight: 1, fillOpacity: .08 }).addTo(layer);
+  pins = five.map(({ m, mi }, i) => L.marker([m.lat, m.lng], { title: `${i + 1}. ${shortStore(m.retailer)}, ${m.city}`,
+      icon: L.divIcon({ className: "", html: `<span class="pin-num"><span>${i + 1}</span></span>`, iconSize: [26, 26], iconAnchor: [4, 26], popupAnchor: [9, -24] }) })
+    .bindPopup(`<b>${i + 1}. ${esc(shortStore(m.retailer))} · ${esc(m.city)}</b>${esc(m.street)}<br>${mi.toFixed(1)} mi ${here ? "from you" : "from " + esc(HOME.name)}<br>
+      <a href="${esc(directions(m))}" target="_blank" rel="noopener">Directions</a>`).addTo(layer));
+  // Re-frame the map only when the set of machines changes (not every time your position wiggles).
+  const set = five.map(x => x.m.id).join() + (here ? "@" : "");
+  if (set !== lastSet){
+    lastSet = set;
+    map.fitBounds(L.latLngBounds([[o.lat, o.lng], ...five.map(({ m }) => [m.lat, m.lng])]), { padding: [30, 30], maxZoom: 15, animate: false });
+  }
+}
+let pins = [];
+$("closest").addEventListener("click", e => {
+  if (e.target.closest("a")) return;
+  const li = e.target.closest("[data-pin]"); if (!li || !pins[+li.dataset.pin]) return;
+  const pin = pins[+li.dataset.pin];
+  map.getContainer().scrollIntoView({ block: "nearest", behavior: "smooth" });
+  map.setView(pin.getLatLng(), map.getZoom(), { animate: false });   // centre first, so the pop-up has room above the pin
+  pin.openPopup();
+});
+$("closest").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("[data-pin]")) e.target.click(); });
+
+function locNote(msg){
+  $("locNote").textContent = msg ?? (here
+    ? `Using your current location (accurate to about ${here.acc < 1000 ? Math.round(here.acc * 3.28) + " ft" : (here.acc / 1609).toFixed(1) + " mi"}). Distances are straight-line miles.`
+    : `Showing machines within ${VEND_MI} miles of ${HOME.name}. Tap “Use my location” to see the closest ones to where you are right now.`);
+  $("locBtn").textContent = here ? "📍 Stop using my location" : "📍 Use my location";
+}
+function startLocation(){
+  if (!("geolocation" in navigator)) return locNote("This browser can’t share your location.");
+  locNote("Finding you…");
+  watchId = navigator.geolocation.watchPosition(pos => {
+    here = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+    if (!state.useLoc){ state.useLoc = true; save(); }
+    locNote(); renderMap();
+  }, err => {
+    stopLocation(false);
+    locNote(err.code === 1
+      ? "Location is blocked for this site. To allow it: tap the icon left of the web address (🔒 or ⓘ) → Location → Allow, then tap “Use my location” again."
+      : "Couldn’t find your location right now. Try again in a moment.");
+  }, { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+}
+function stopLocation(forget = true){
+  if (watchId != null) navigator.geolocation.clearWatch(watchId);
+  watchId = null; here = null;
+  if (forget){ state.useLoc = false; save(); }
+  locNote(); renderMap();
+}
+$("locBtn").addEventListener("click", () => here || watchId != null ? stopLocation() : startLocation());
+
+function render(){ renderFeed(); renderMap(); renderMachines(); renderTimes(); renderSocial(); }
 $("radius").value = String(state.radius);
 $("radius").addEventListener("change", () => { state.radius = +$("radius").value; save(); render(); });
 $("refreshBtn").addEventListener("click", () => fetchReddit(false));
@@ -553,7 +682,10 @@ async function loadMachines(){
   notifyLabel();
   // "New" = posted since your last visit (or, on a first visit, since the page opened).
   await loadMachines();
+  locNote();
   render();
+  // If you allowed location before, pick it up again without asking.
+  if (state.useLoc) startLocation();
   await fetchReddit(true);
   // Next time you open the page, posts newer than now count as new.
   window.addEventListener("pagehide", () => { state.lastVisit = Date.now(); save(); });
