@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02T23:54:18.959Z",
+ "updated": "2026-11-05T15:34:43.093Z",
  "home": {
   "name": "Yorba Linda, CA",
   "lat": 33.8886,
@@ -631,6 +631,17 @@
    "street": "5500 Woodruff Ave",
    "city": "Lakewood",
    "zip": "90713",
+   "state": "CA"
+  },
+  {
+   "id": "recFolGp6Qeod7OhZ",
+   "name": "Q01241",
+   "lat": 33.8113386,
+   "lng": -118.1055457,
+   "retailer": "Stater Bros. Markets",
+   "street": "6501 E Spring St",
+   "city": "Long Beach",
+   "zip": "90808",
    "state": "CA"
   },
   {
