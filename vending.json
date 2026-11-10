@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-05T15:34:43.093Z",
+ "updated": "2026-11-10T21:00:00.447Z",
  "home": {
   "name": "Yorba Linda, CA",
   "lat": 33.8886,
@@ -150,6 +150,17 @@
    "state": "CA"
   },
   {
+   "id": "rec5UtRWyNvB6IAlL",
+   "name": "Q01719",
+   "lat": 33.9399277,
+   "lng": -117.9343086,
+   "retailer": "Stater Bros. Markets",
+   "street": "851 N Harbor Blvd",
+   "city": "La Habra",
+   "zip": "90631",
+   "state": "CA"
+  },
+  {
    "id": "rech9s6D7OozSApJ8",
    "name": "Q00519",
    "lat": 33.9614709,
@@ -180,6 +191,17 @@
    "street": "1616 W Katella Ave",
    "city": "Anaheim",
    "zip": "92802",
+   "state": "CA"
+  },
+  {
+   "id": "recos7g8CUerxttnq",
+   "name": "Q01250",
+   "lat": 33.8242978,
+   "lng": -117.9579935,
+   "retailer": "Stater Bros. Markets",
+   "street": "610 S Brookhurst St",
+   "city": "Anaheim",
+   "zip": "92804",
    "state": "CA"
   },
   {
