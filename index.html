@@ -1190,7 +1190,7 @@ function render(){
       </select>
     </div>`;
   m.innerHTML = (a.kind === "fa" ? `<section class="picker" id="picker" hidden></section>` : "")
-    + (a.kind === "top" ? `<section class="insights" id="insights"></section><h2 class="grid-title">Your cards, most valuable first</h2>` : "")
+    + (a.kind === "top" ? `<section class="insights" id="insights"></section><h2 class="grid-title">${viewOnly ? "PYB’s" : "Your"} cards, most valuable first</h2>` : "")
     + `<p class="status" id="status"></p><ul class="grid" id="grid"></ul>`;
   if (a.kind === "fa") renderPicker();
   $("q").addEventListener("input", e => { ui.q = e.target.value; renderGrid(); });
@@ -1255,7 +1255,7 @@ function renderGrid(){
           : sortBy === "new" ? (x,y) => y.order - x.order || byNum(x,y)
           : (x,y) => x.order - y.order || byNum(x,y));
   st.className = "status";
-  st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
+  st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : viewOnly ? "No cards marked as owned yet." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
     : cards.length === 0 && a.kind === "fa" ? (viewOnly ? "No full-art cards here yet." : "No cards yet. Type a card’s name in the “Add a card…” box above and click Add, then pick your card from the results. Add the card number to narrow it down, e.g. “Wobbuffet 203”.")
     : cards.length === 0 ? (a.kind in FIXED ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
@@ -1571,7 +1571,7 @@ function renderInsights(){
       ${sec.label === "By category" ? `<p class="ins-hint">A card can be in more than one category, so these can add up to more than 100%.</p>` : ""}
       <ul class="bars">${shown.map(r => {
         const pctN = Math.round(r.n / n * 100), pctV = total ? Math.round(r.v / total * 100) : 0;
-        const tip = `${r.name}: ${r.n} card${r.n === 1 ? "" : "s"} (${pctN}% of your cards), ${money(r.v, "USD")} (${pctV}% of value)`;
+        const tip = `${r.name}: ${r.n} card${r.n === 1 ? "" : "s"} (${pctN}% of ${viewOnly ? "PYB’s" : "your"} cards), ${money(r.v, "USD")} (${pctV}% of value)`;
         return `<li title="${esc(tip)}"><span class="bar-name">${esc(r.name)}</span>
           <span class="bar-track"><span class="bar-fill" style="width:${Math.max(2, metric(r) / max * 100)}%"></span></span>
           <span class="bar-val">${ins.by === "value" ? `${money(r.v, "USD")} · ${pctV}%` : `${r.n} · ${pctN}%`}</span></li>`; }).join("")}</ul>
@@ -1611,7 +1611,7 @@ async function drawPortfolio(all){
   $("pfNote").textContent = allPts.length
     ? `What the cards you own today were worth on each day, at TCGplayer market prices (${counted} of ${total} cards have a price history). History starts ${new Date(allPts[0].t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}.`
     : "";
-  drawLineChart(box, pts, allPts.length ? "Not enough history yet; check back in a few days." : "None of your cards have a price history yet.");
+  drawLineChart(box, pts, allPts.length ? "Not enough history yet; check back in a few days." : `None of ${viewOnly ? "these" : "your"} cards have a price history yet.`);
   if (pts.length >= 2 && $("pfChange")){
     const d = pts[pts.length - 1].v - pts[0].v, pct = pts[0].v ? d / pts[0].v * 100 : 0;
     $("pfChange").textContent = `${d >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(d), "USD")} (${d >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%) over ${ins.range === "All" ? "all history" : ins.range}`;
@@ -1821,6 +1821,7 @@ function listTile(a, cat){
     <span class="bar"><span style="width:${pct}%"></span></span></button>`;
 }
 function renderHome(){
+  const V = viewOnly; // a friend opening a share link: talk about PYB's binder, not "your" binder
   const owned = ownedEverywhere(), T = TOP_LIST;
   const ranked = owned.filter(c => cardImages(c, c.lang)).sort((x, y) => cardValue(T, y) - cardValue(T, x));
   const total = sumValue(owned.map(c => priceOf(T, c)));
@@ -1829,7 +1830,7 @@ function renderHome(){
   const five = ranked.slice(0, 5), order = [3, 1, 0, 2, 4].filter(i => i < five.length); // best card in the middle
   const fan = five.length ? order.map((ci, pos) => { const f = FAN[pos + Math.floor((5 - order.length) / 2)];
       return homeCard(T, five[ci], `style="--x:${f.x};--y:${f.y};--r:${f.r};z-index:${5 - Math.abs(2 - pos)}"`); }).join("")
-    : `<div class="fan-empty">Mark some cards as owned and your best ones show up here.</div>`;
+    : `<div class="fan-empty">${V ? "No cards marked as owned yet." : "Mark some cards as owned and your best ones show up here."}</div>`;
   // card of the day: one of your cards, a different one each day
   const day = Math.floor(Date.now() / 86400000), pick = ranked.length ? ranked[(day * 7919) % ranked.length] : null;
   // where favorites meet: cards in both an artist tab and a Pokémon tab
@@ -1847,14 +1848,14 @@ function renderHome(){
     <section class="hero">
       <div>
         <p class="eyebrow">PYB’s TCG Collection</p>
-        <h2>Welcome back to your binder</h2>
+        <h2>${V ? "Welcome to PYB’s binder" : "Welcome back to your binder"}</h2>
         <p class="lede">${state.artists.length ? `Following <b>${state.artists.length}</b> artist${state.artists.length === 1 ? "" : "s"}` : "No artists yet"}${state.pokemon.length ? ` and <b>${state.pokemon.length}</b> Pokémon` : ""}${state.masterSets.length ? `, chasing <b>${state.masterSets.length}</b> master set${state.masterSets.length === 1 ? "" : "s"}` : ""}.</p>
         <div class="hero-stats">
           <div class="hero-stat"><b>${total}</b><span>Collection value</span></div>
           <div class="hero-stat"><b>${owned.length}</b><span>Cards owned</span></div>
           <div class="hero-stat"><b>${ranked[0] ? money(cardValue(T, ranked[0]), "USD") : "–"}</b><span>Top card${ranked[0] ? ": " + esc(ranked[0].name) : ""}</span></div>
         </div>
-        <div class="hero-cta"><button class="btn" data-go="top">See my most valuable</button>${state.masterSets.length ? `<button class="btn light" data-go="ms">Master sets</button>` : ""}</div>
+        <div class="hero-cta"><button class="btn" data-go="top">${V ? "See the most valuable" : "See my most valuable"}</button>${state.masterSets.length ? `<button class="btn light" data-go="ms">Master sets</button>` : ""}</div>
       </div>
       <div class="fan">${fan}</div>
     </section>
@@ -1864,15 +1865,15 @@ function renderHome(){
         ${pick ? `<div class="spot">${homeCard(T, pick)}<div class="spot-info"><b>${esc(pick.name)}</b><span>${esc(setName(T, pick))}${pick.num ? " #" + esc(pick.num) : ""}</span>
           ${pick.vlabel || rarityOf(pick.lang, pick) ? `<span>${esc(pick.vlabel || rarityOf(pick.lang, pick))}</span>` : ""}
           <span class="price">${(p => p ? money(p.v, p.c) : "")(priceOf(T, pick)?.p)}</span></div></div>`
-        : `<p class="home-empty">Your cards will take turns here, one each day.</p>`}
+        : `<p class="home-empty">${V ? "PYB’s" : "Your"} cards will take turns here, one each day.</p>`}
       </section>
       <section class="panel">
-        <div class="hsec"><h3>Where your favorites meet</h3><p>${meet.length ? `Your artists drawing your Pokémon · <b>${meetOwned}</b> of ${meet.length} owned` : ""}</p></div>
+        <div class="hsec"><h3>Where ${V ? "PYB’s" : "your"} favorites meet</h3><p>${meet.length ? `${V ? "Favorite artists drawing favorite Pokémon" : "Your artists drawing your Pokémon"} · <b>${meetOwned}</b> of ${meet.length} owned` : ""}</p></div>
         ${meet.length ? `<div class="strip">${meet.slice(0, 30).map(x => `<div class="mini ${x.own ? "own" : ""}">${homeCard(x.a, x.c)}<b>${esc(x.c.name)}</b><span>${esc(x.artist)}</span></div>`).join("")}</div>`
-        : `<p class="home-empty">${state.artists.length && state.pokemon.length ? "None of your Pokémon have cards by your artists yet (or they’re still loading)." : "Add favorite artists and Pokémon to see the cards where they overlap."}</p>`}
+        : `<p class="home-empty">${state.artists.length && state.pokemon.length ? (V ? "None of these Pokémon have cards by these artists yet (or they’re still loading)." : "None of your Pokémon have cards by your artists yet (or they’re still loading).") : "Add favorite artists and Pokémon to see the cards where they overlap."}</p>`}
       </section>
     </div>
-    ${state.artists.length ? `<section><div class="hsec"><h3>Favorite artists</h3><p>Your best card from each, front and center</p></div>
+    ${state.artists.length ? `<section><div class="hsec"><h3>Favorite artists</h3><p>${V ? "The best card from each" : "Your best card from each"}, front and center</p></div>
       <div class="tiles">${state.artists.map(a => listTile(a, "artists")).join("")}</div></section>` : ""}
     ${state.pokemon.length ? `<section><div class="hsec"><h3>Favorite Pokémon</h3></div>
       <div class="tiles">${state.pokemon.map(p => listTile(p, "poke")).join("")}</div></section>` : ""}
