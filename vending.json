@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-10T21:00:00.447Z",
+ "updated": "2026-11-11T21:32:42.063Z",
  "home": {
   "name": "Yorba Linda, CA",
   "lat": 33.8886,
@@ -642,6 +642,17 @@
    "street": "133 W Rte 66",
    "city": "Glendora",
    "zip": "91740",
+   "state": "CA"
+  },
+  {
+   "id": "recPGh1JLWGzocYDt",
+   "name": "Q01300",
+   "lat": 33.8229453,
+   "lng": -117.5232587,
+   "retailer": "Stater Bros. Markets",
+   "street": "2243 Eagle Glen Pkwy",
+   "city": "Corona",
+   "zip": "92883",
    "state": "CA"
   },
   {
