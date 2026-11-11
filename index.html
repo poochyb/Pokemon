@@ -413,7 +413,7 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
     <button class="btn light-dark" id="nativeShare" hidden>Send…</button>
     <button class="btn light-dark" id="closeShare">Close</button>
   </div>
-  <p class="hint">This is a snapshot of right now. If you mark more cards later, click Share again for a fresh link.</p>
+  <p class="hint" id="shareHint"></p>
 </dialog>
 <dialog id="cloudDlg" class="share" aria-labelledby="cloudTitle">
   <h3 id="cloudTitle">Cloud backup</h3>
@@ -1965,6 +1965,7 @@ async function cloudSync(){
         Object.assign(cloud, { hash: h, synced: savedAt });
       }
       Object.assign(cloud, { at: Date.now(), err: "" });
+      if (cloud.share) await updateShareGist().catch(() => {}); // the short share link follows every change
     } catch(e){
       cloud.err = e.status === 401 || e.status === 403 ? "token" : e.status === 404 ? "gone" : "offline";
       if (cloud.err === "offline") cloudTimer = setTimeout(cloudSync, 60000); // try again in a minute
@@ -1976,14 +1977,11 @@ async function cloudSync(){
 }
 async function cloudConnect(token){
   const me = await gh("/user", {}, token);
-  let gist = null; // reuse the backup made on another device, if there is one
-  for (let page = 1; page <= 10 && !gist; page++){
-    const list = await gh(`/gists?per_page=100&page=${page}`, {}, token);
-    gist = list.find(g => g.files?.[GIST_FILE]);
-    if (list.length < 100) break;
-  }
+  const gist = await findGist(GIST_FILE, token); // reuse the backup made on another device, if there is one
   cloud = { token, user: me.login };
   if (gist) cloud.gist = gist.id;
+  const sg = await findGist(SHARE_FILE, token).catch(() => null); // the short share link made on another device
+  if (sg) cloud.share = sg.id;
   else {
     const savedAt = Date.now();
     const g = await gh("/gists", { method: "POST", body: JSON.stringify({ description: "PYB’s TCG Collection backup (saved by the app; please keep it secret)", public: false, ...JSON.parse(gistBody(backupData(), savedAt)) }) }, token);
@@ -2031,6 +2029,37 @@ $("cloudOffBtn").addEventListener("click", () => {
 // Pick up changes made on another device when coming back to this tab; save right away when leaving it.
 document.addEventListener("visibilitychange", () => { if (cloud.gist && !viewOnly) cloudSync(); });
 
+// ----- Short share link -----
+// With cloud backup on, Share gives a short link (#s=<gist id>) to a second secret gist that holds only what a
+// share link holds. It's updated after every cloud save, so the same link always shows the current collection.
+const SHARE_FILE = "pyb-tcg-share.json";
+async function findGist(file, token = cloud.token){
+  for (let page = 1; page <= 10; page++){
+    const list = await gh(`/gists?per_page=100&page=${page}`, {}, token), g = list.find(x => x.files?.[file]);
+    if (g || list.length < 100) return g || null;
+  }
+  return null;
+}
+const shareHash = () => textHash(JSON.stringify({ ...shareData("home"), d: undefined }));
+const shareBody = () => JSON.stringify({ files: { [SHARE_FILE]: { content: JSON.stringify(shareData("home")) } } });
+async function updateShareGist(){
+  if (!cloud.share || viewOnly) return;
+  const h = shareHash();
+  if (h === cloud.shareHash) return;
+  try { await gh(`/gists/${cloud.share}`, { method: "PATCH", body: shareBody() }); }
+  catch(e){ if (e.status === 404) cloud.share = cloud.shareHash = ""; throw e; } // deleted on GitHub: make a new one next time
+  cloud.shareHash = h; keepCloud();
+}
+async function shortShareLink(){
+  if (!cloud.gist || cloud.err === "token") return null;
+  if (!cloud.share){
+    const g = await findGist(SHARE_FILE) || await gh("/gists", { method: "POST", body: JSON.stringify({ description: "PYB’s TCG Collection share link (read by the app)", public: false, ...JSON.parse(shareBody()) }) });
+    cloud.share = g.id; cloud.shareHash = ""; keepCloud();
+  }
+  await updateShareGist();
+  return location.origin + location.pathname + "#s=" + cloud.share;
+}
+
 // ----- Share link -----
 // The binder (artists + owned cards) is packed into the part of the link after "#",
 // compressed when the browser supports it. Nothing is uploaded anywhere.
@@ -2051,19 +2080,26 @@ async function decodeShare(code){
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
-function shareData(){
+function shareData(cat = state.cat){
   // Group owned card ids by language, only for languages of artists in the binder.
   const langs = new Set([...state.artists.map(a => a.lang), ...state.pokemon.map(p => p.lang), ...state.fullArts.map(e => e.lang), "en", "tcgp"]), owned = {};
   Object.keys(state.owned).forEach(k => {
     const i = k.indexOf(":"), lang = k.slice(0, i);
     if (langs.has(lang)) (owned[lang] ||= []).push(k.slice(i + 1));
   });
-  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), m: state.masterSets.map(x => [x.name, x.groups]), w: Object.entries(state.versions), o: owned, c: state.cat };
+  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), m: state.masterSets.map(x => [x.name, x.groups]), w: Object.entries(state.versions), o: owned, c: cat };
 }
 
 $("shareBtn").addEventListener("click", async () => {
   if (!state.artists.length && !state.pokemon.length && !state.fullArts.length && !Object.keys(state.owned).length){ alert("Mark some cards as owned first, then share."); return; }
-  const url = location.origin + location.pathname + "#share=" + await encodeShare(shareData());
+  const b = $("shareBtn"); b.disabled = true;
+  let url = null;
+  try { url = await shortShareLink(); } catch(e){}
+  b.disabled = false;
+  $("shareHint").innerHTML = url ? "This link always shows your collection as it is now: when you mark more cards, people with the link see them too (after your cloud backup saves). Send it once and you’re done."
+    : cloud.gist ? "This is a snapshot of right now (the short link needs GitHub, which couldn’t be reached). If you mark more cards later, click Share again for a fresh link."
+    : "This is a snapshot of right now. If you mark more cards later, click Share again for a fresh link. <b>Want a short link that never changes?</b> Turn on <b>Backup ▾ → Cloud backup</b>, then click Share again.";
+  url ||= location.origin + location.pathname + "#share=" + await encodeShare(shareData());
   $("shareUrl").value = url;
   $("copyShare").textContent = "Copy link";
   $("nativeShare").hidden = !navigator.share;
@@ -2081,8 +2117,15 @@ $("nativeShare").addEventListener("click", () => {
 $("closeShare").addEventListener("click", () => $("shareDlg").close());
 addEventListener("hashchange", () => location.reload());
 
-async function openShared(code){
-  const d = await decodeShare(code);
+async function readShortShare(id){
+  const r = await fetch("https://api.github.com/gists/" + encodeURIComponent(id), { cache: "no-store", headers: { Accept: "application/vnd.github+json" } });
+  if (!r.ok) throw Object.assign(new Error("GitHub answered " + r.status), { status: r.status });
+  const f = (await r.json()).files?.[SHARE_FILE];
+  if (!f) throw new Error("bad link");
+  return JSON.parse(f.truncated ? await (await fetch(f.raw_url, { cache: "no-store" })).text() : f.content);
+}
+async function openShared(code, data){
+  const d = data || await decodeShare(code);
   if (!Array.isArray(d.a)) throw new Error("bad link");
   const owned = {};
   Object.entries(d.o || {}).forEach(([lang, ids]) => ids.forEach(id => owned[lang + ":" + id] = true));
@@ -2105,10 +2148,19 @@ async function openShared(code){
 
 // Start
 (async () => {
-  const m = location.hash.match(/^#share=(.+)$/);
+  const m = location.hash.match(/^#share=(.+)$/), s = location.hash.match(/^#s=([0-9a-fA-F]+)$/);
   if (m){
     try { await openShared(m[1]); }
     catch(e){ alert("This share link looks incomplete or broken. Ask for the link again, and make sure you copy all of it."); }
+  } else if (s){
+    try { await openShared(null, await readShortShare(s[1])); }
+    catch(e){
+      alert(e.status === 404 ? "This share link no longer works (it may have been turned off). Ask for a new link."
+        : e.status === 403 || e.status === 429 ? "GitHub is busy right now. Please try this link again in a little while."
+        : e.message === "bad link" ? "This share link looks broken. Ask for the link again."
+        : "Couldn’t load this shared collection. Check your internet connection and try again.");
+      state.cat = "home";
+    }
   } else state.cat = "home";
   loadNames("en");
   render();
