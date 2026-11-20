@@ -1587,29 +1587,41 @@ function renderInsights(){
     <div class="ins-grid">${sections.map(bars).join("")}</div>`;
   drawPortfolio(all);
 }
-// What the cards you own now were worth on each day (TCGplayer prices from history/; carries the last known price forward).
+// What the cards you own now were worth on each day. Each card's daily TCGplayer history (history/) is scaled so its
+// last day equals the price the app shows today (chosen version / printing), and cards with no history count at
+// today's price every day, so the chart always ends at the "Collection value" tile.
 async function drawPortfolio(all){
-  const withTp = all.map(e => ({ e, tp: faEntry(e.k)?.tp || e.c.pid || state.prices[e.k]?.tp })).filter(x => x.tp);
-  const key = withTp.map(x => x.tp).sort().join(",");
+  const usd = e => e.price?.c === "USD" ? e.price.v : 0;
+  const tpOf = e => (e.a.kind !== "ms" && chosenVersion(e.k)?.tp) || faEntry(e.k)?.tp || e.c.pid || state.prices[e.k]?.tp || tcgpMatch(e.c, e.lang)?.p;
+  const withTp = all.map(e => ({ e, tp: tpOf(e) }));
+  const key = withTp.map(x => x.tp || "").join(",");
   if (ins.portfolioKey !== key){
     ins.portfolioKey = key; ins.portfolio = null;
-    const series = await Promise.all(withTp.map(x => loadHistory(x.tp)));
+    const series = await Promise.all(withTp.map(x => x.tp ? loadHistory(x.tp) : null));
     if (ins.portfolioKey !== key) return;
-    const days = new Map(); // day → total
-    const allDays = [...new Set(series.flat().filter(Boolean).map(p => p.t))].sort((a, b) => a - b);
-    series.forEach(sr => {
-      if (!sr?.length) return;
-      let j = 0, lastV = sr[0].v; // before a card's first price, assume that first price
-      allDays.forEach(t => { while (j < sr.length && sr[j].t <= t){ lastV = sr[j].v; j++; } days.set(t, (days.get(t) || 0) + lastV); });
-    });
-    ins.portfolio = { pts: allDays.map(t => ({ t, v: days.get(t) })), counted: series.filter(x => x?.length).length, total: all.length };
+    ins.portfolio = { series: series.map(sr => sr?.filter(p => p.v > 0) || []) };
   }
+  const { series } = ins.portfolio;
+  const allDays = [...new Set(series.flat().map(p => p.t))].sort((a, b) => a - b);
+  const days = new Map(allDays.map(t => [t, 0]));
+  let counted = 0;
+  withTp.forEach(({ e }, i) => {
+    const now = usd(e); if (!now) return;
+    const sr = series[i];
+    if (!sr.length){ allDays.forEach(t => days.set(t, days.get(t) + now)); return; }
+    counted++;
+    const scale = now / sr[sr.length - 1].v; // history may follow another printing; keep its ups and downs, end at today's price
+    let j = 0, lastV = sr[0].v; // before a card's first price, assume that first price
+    allDays.forEach(t => { while (j < sr.length && sr[j].t <= t){ lastV = sr[j].v; j++; } days.set(t, days.get(t) + lastV * scale); });
+  });
+  const pricedN = all.filter(e => usd(e)).length;
+  Object.assign(ins.portfolio, { pts: allDays.map(t => ({ t, v: days.get(t) })), counted, total: pricedN });
   const box = $("pfChart"); if (!box || !ins.portfolio) return;
-  const { pts: allPts, counted, total } = ins.portfolio;
+  const allPts = ins.portfolio.pts, total = pricedN;
   const span = RANGES.find(r => r[0] === ins.range)[1], end = allPts.length ? allPts[allPts.length - 1].t : 0;
   const pts = allPts.filter(p => end - p.t < span * 86400000);
   $("pfNote").textContent = allPts.length
-    ? `What the cards you own today were worth on each day, at TCGplayer market prices (${counted} of ${total} cards have a price history). History starts ${new Date(allPts[0].t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}.`
+    ? `What the cards you own today were worth on each day, at TCGplayer market prices. The last day matches your collection value. ${counted} of ${total} priced cards have a daily price history${total > counted ? `; the other ${total - counted} are counted at today’s price on every day` : ""}. History starts ${new Date(allPts[0].t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}.`
     : "";
   drawLineChart(box, pts, allPts.length ? "Not enough history yet; check back in a few days." : `None of ${viewOnly ? "these" : "your"} cards have a price history yet.`);
   if (pts.length >= 2 && $("pfChange")){
