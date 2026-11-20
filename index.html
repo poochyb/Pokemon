@@ -636,7 +636,6 @@ fetch("fx.json").then(r => r.ok ? r.json() : null).then(d => d && useRate(d.eurU
 fetch("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD").then(r => r.ok ? r.json() : null)
   .then(d => d && useRate(d.rates?.USD, d.date)).catch(() => {});
 const toUSD = p => p?.c === "EUR" ? { ...p, v: p.v * fx.rate, c: "USD", eur: p.v } : p; // eur: the original euro price
-const fxNote = () => `€1 = $${fx.rate.toFixed(4)}${fx.date ? " on " + new Date(fx.date + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}`;
 const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // Price order: the exact TCGplayer listing in today's prices.json (a Full Arts version first, else the card's
 // main listing), then TCGdex's own price. For English cards TCGdex can't price in dollars, fall back to
@@ -1562,9 +1561,8 @@ function renderInsights(){
   const total = all.reduce((t, e) => t + usd(e), 0);
   const priced = all.filter(e => usd(e) > 0).sort((x, y) => usd(y) - usd(x));
   const TOPK = priced.length > 10 ? 10 : Math.min(3, priced.length), topSum = priced.slice(0, TOPK).reduce((t, e) => t + usd(e), 0);
-  const eur = all.filter(e => e.price?.eur != null).length;
   const tiles = [
-    ["Collection value", money(total, "USD"), eur ? `${eur} card${eur === 1 ? "" : "s"} converted from euros (${fxNote()})` : "TCGplayer market prices"],
+    ["Collection value", money(total, "USD"), "Market prices in US dollars"],
     ["Cards owned", n.toLocaleString(), `${priced.length} with a dollar price`],
     ["Average card", money(priced.length ? total / priced.length : 0, "USD"), priced.length ? `middle card ${money(usd(priced[Math.floor(priced.length / 2)]), "USD")}` : ""],
     [`Top ${TOPK} card${TOPK === 1 ? "" : "s"}`, total ? Math.round(topSum / total * 100) + "%" : "–", "of the collection’s value"],
@@ -1671,7 +1669,7 @@ async function openPriceHistory(a, c){
   $("pdMissing").hidden = viewOnly;
   const cm = pr?.cm;
   $("pdCm").innerHTML = cm ? `<strong>Cardmarket (Europe)</strong> average sale: ${[["1 day", cm.a1], ["7 days", cm.a7], ["30 days", cm.a30]]
-    .filter(x => x[1] > 0).map(([l, v]) => `${l} <b>${money(v * fx.rate, "USD")}</b>`).join(" · ")} (converted from euros, ${fxNote()})` : "";
+    .filter(x => x[1] > 0).map(([l, v]) => `${l} <b>${money(v * fx.rate, "USD")}</b>`).join(" · ")}` : "";
   $("priceDlg").showModal();
   await loadSeries();
 }
@@ -1719,7 +1717,7 @@ function setVersion(k, id){
 }
 function drawPriceHistory(){
   const now = priceOf(ph.a, ph.c)?.p, all = ph.series || [];
-  $("pdNow").textContent = now ? money(now.v, now.c) + (now.eur != null ? ` (Cardmarket €${now.eur.toFixed(2)}, ${fxNote()})` : "") : "No price yet";
+  $("pdNow").textContent = now ? money(now.v, now.c) : "No price yet";
   $("pdRanges").innerHTML = RANGES.map(([r]) => `<button data-range="${r}" aria-pressed="${ph.range === r}">${r}</button>`).join("");
   const days = RANGES.find(x => x[0] === ph.range)[1], end = all.length ? all[all.length - 1].t : 0;
   const pts = all.filter(p => end - p.t < days * 86400000);
