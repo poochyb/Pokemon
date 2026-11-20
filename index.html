@@ -623,11 +623,29 @@ function pickPrice(pricing){
   }
   return null;
 }
+// Euro prices (Cardmarket, from TCGdex) are shown in dollars at the latest euro → dollar rate: fx.json (saved daily
+// by the price job from the European Central Bank's rate) or, if newer, Frankfurter's live ECB rate. FX_FALLBACK
+// is only used until one of them answers.
+const FX_FALLBACK = 1.16;
+const fx = { rate: FX_FALLBACK, date: "" };
+function useRate(rate, date){
+  if (!(rate > 0) || (fx.date && date && date <= fx.date)) return;
+  Object.assign(fx, { rate, date: date || fx.date }); if (typeof render === "function") render();
+}
+fetch("fx.json").then(r => r.ok ? r.json() : null).then(d => d && useRate(d.eurUsd, d.date)).catch(() => {});
+fetch("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD").then(r => r.ok ? r.json() : null)
+  .then(d => d && useRate(d.rates?.USD, d.date)).catch(() => {});
+const toUSD = p => p?.c === "EUR" ? { ...p, v: p.v * fx.rate, c: "USD", eur: p.v } : p; // eur: the original euro price
+const fxNote = () => `€1 = $${fx.rate.toFixed(4)}${fx.date ? " on " + new Date(fx.date + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}`;
 const money = (v, c) => (c === "EUR" ? "€" : "$") + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // Price order: the exact TCGplayer listing in today's prices.json (a Full Arts version first, else the card's
 // main listing), then TCGdex's own price. For English cards TCGdex can't price in dollars, fall back to
 // prices.json: TCGplayer prices downloaded daily by a GitHub Action (scripts/build-prices.mjs).
-function priceOf(a, c){
+function priceOf(a, c){ // always in dollars (euro prices converted)
+  const r = priceInAnyCurrency(a, c);
+  return r?.p?.c === "EUR" ? { ...r, p: toUSD(r.p) } : r;
+}
+function priceInAnyCurrency(a, c){
   if (c.pid && "price" in c) return { p: c.price != null ? { v: c.price, c: "USD" } : null, t: Date.now() }; // master-set printing: today's TCGplayer price
   const k = ckey(cardLang(a, c), c.id), ver = chosenVersion(k), pr = state.prices[k];
   const vp = ver && versionPrice(k, ver); if (vp) return { p: vp, t: pr?.t || Date.now() }; // the version the owner has
@@ -1544,9 +1562,9 @@ function renderInsights(){
   const total = all.reduce((t, e) => t + usd(e), 0);
   const priced = all.filter(e => usd(e) > 0).sort((x, y) => usd(y) - usd(x));
   const TOPK = priced.length > 10 ? 10 : Math.min(3, priced.length), topSum = priced.slice(0, TOPK).reduce((t, e) => t + usd(e), 0);
-  const eur = all.filter(e => e.price?.c === "EUR").length;
+  const eur = all.filter(e => e.price?.eur != null).length;
   const tiles = [
-    ["Collection value", money(total, "USD"), eur ? `plus ${eur} card${eur === 1 ? "" : "s"} priced only in euros` : "TCGplayer market prices"],
+    ["Collection value", money(total, "USD"), eur ? `${eur} card${eur === 1 ? "" : "s"} converted from euros (${fxNote()})` : "TCGplayer market prices"],
     ["Cards owned", n.toLocaleString(), `${priced.length} with a dollar price`],
     ["Average card", money(priced.length ? total / priced.length : 0, "USD"), priced.length ? `middle card ${money(usd(priced[Math.floor(priced.length / 2)]), "USD")}` : ""],
     [`Top ${TOPK} card${TOPK === 1 ? "" : "s"}`, total ? Math.round(topSum / total * 100) + "%" : "–", "of the collection’s value"],
@@ -1653,7 +1671,7 @@ async function openPriceHistory(a, c){
   $("pdMissing").hidden = viewOnly;
   const cm = pr?.cm;
   $("pdCm").innerHTML = cm ? `<strong>Cardmarket (Europe)</strong> average sale: ${[["1 day", cm.a1], ["7 days", cm.a7], ["30 days", cm.a30]]
-    .filter(x => x[1] > 0).map(([l, v]) => `${l} <b>${money(v, "EUR")}</b>`).join(" · ")}` : "";
+    .filter(x => x[1] > 0).map(([l, v]) => `${l} <b>${money(v * fx.rate, "USD")}</b>`).join(" · ")} (converted from euros, ${fxNote()})` : "";
   $("priceDlg").showModal();
   await loadSeries();
 }
@@ -1701,7 +1719,7 @@ function setVersion(k, id){
 }
 function drawPriceHistory(){
   const now = priceOf(ph.a, ph.c)?.p, all = ph.series || [];
-  $("pdNow").textContent = now ? money(now.v, now.c) : "No price yet";
+  $("pdNow").textContent = now ? money(now.v, now.c) + (now.eur != null ? ` (Cardmarket €${now.eur.toFixed(2)}, ${fxNote()})` : "") : "No price yet";
   $("pdRanges").innerHTML = RANGES.map(([r]) => `<button data-range="${r}" aria-pressed="${ph.range === r}">${r}</button>`).join("");
   const days = RANGES.find(x => x[0] === ph.range)[1], end = all.length ? all[all.length - 1].t : 0;
   const pts = all.filter(p => end - p.t < days * 86400000);
@@ -1806,7 +1824,7 @@ addEventListener("resize", fitTopbar);
 // Pokémon, the cards where the two meet, and master-set progress. Clicking a card you own opens its price
 // pop-up; anything else opens its tab.
 let homeHtml = "";
-const usd = p => !p ? 0 : p.c === "USD" ? p.v : p.v * 1.1; // for ranking only (euros roughly in dollars)
+const usd = p => !p ? 0 : toUSD(p).v;
 const cardValue = (a, c) => usd(priceOf(a, c)?.p);
 function homePic(a, c){
   const pic = cardImages(c, cardLang(a, c));
