@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-11T21:32:42.063Z",
+ "updated": "2026-11-20T21:57:54.055Z",
  "home": {
   "name": "Yorba Linda, CA",
   "lat": 33.8886,
@@ -158,6 +158,17 @@
    "street": "851 N Harbor Blvd",
    "city": "La Habra",
    "zip": "90631",
+   "state": "CA"
+  },
+  {
+   "id": "recFnBbiHW0xQIiSj",
+   "name": "Q01558",
+   "lat": 33.9938562,
+   "lng": -117.7588692,
+   "retailer": "Stater Bros. Markets",
+   "street": "14250 Chino Hills Pkwy",
+   "city": "Chino Hills",
+   "zip": "91709",
    "state": "CA"
   },
   {
