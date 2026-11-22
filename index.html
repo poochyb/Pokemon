@@ -1040,16 +1040,19 @@ function isChase(lang, c){
   const [n, of] = String(num).split("/").map(x => parseInt(x, 10));
   return n > 0 && of > 0 && n > of;
 }
+const CHASE_MIN_USD = 20; // any owned card worth more than this also counts as a chase card
+const pricedOver = (a, c) => { const p = priceOf(a, c)?.p; return p?.c === "USD" && p.v > CHASE_MIN_USD; };
 let chaseMemo = { sig: "", cards: [] };
 function autoChase(){
   const lists = allLists().filter(a => a.kind !== "fa" && a.kind !== "top");
   const sig = [Object.keys(state.owned).length, Object.keys(state.details).length, state.fullArts.length, Object.keys(groupFiles).length,
+    Object.keys(state.prices).length, Object.keys(printShards).length, !!tcgp, fx.rate, JSON.stringify(state.versions).length,
     ...lists.map(a => (mem.cards[lkey(a)] || []).length)].join();
   if (sig === chaseMemo.sig) return chaseMemo.cards;
   const picked = new Set(state.fullArts.map(e => ckey(e.lang, e.id))), seen = new Map();
   lists.forEach(a => (cardsOf(a) || []).forEach(c => {
     const L = cardLang(a, c), k = idKey(a, c);
-    if (picked.has(k) || picked.has(ckey(L, c.id)) || !isOwned(a, c) || !isChase(L, c)) return;
+    if (picked.has(k) || picked.has(ckey(L, c.id)) || !isOwned(a, c) || !(isChase(L, c) || pricedOver(a, c))) return;
     if (keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: L, auto: true, setName: c.setName || setName(a, c), _p: priceOf(a, c) });
   }));
   chaseMemo = { sig, cards: [...seen.values()].map(({ _p, ...c }) => c) };
@@ -1340,7 +1343,7 @@ function renderGrid(){
           : (x,y) => x.order - y.order || byNum(x,y));
   st.className = "status";
   st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : viewOnly ? "No cards marked as owned yet." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
-    : cards.length === 0 && a.kind === "fa" ? (viewOnly ? "No chase cards here yet." : "No cards yet. Cards you own that are Illustration Rare, Special Illustration Rare, full-art Ultra Rare, Mega Attack Rare or gold (Hyper Rare) show up here by themselves, from any category. To add any other card, type its name in the “Add a card…” box above and click Add, then pick your card from the results. Add the card number to narrow it down, e.g. “Wobbuffet 203”.")
+    : cards.length === 0 && a.kind === "fa" ? (viewOnly ? "No chase cards here yet." : "No cards yet. Cards you own that are Illustration Rare, Special Illustration Rare, full-art Ultra Rare, Mega Attack Rare, gold (Hyper Rare) or worth more than $20 show up here by themselves, from any category. To add any other card, type its name in the “Add a card…” box above and click Add, then pick your card from the results. Add the card number to narrow it down, e.g. “Wobbuffet 203”.")
     : cards.length === 0 ? (a.kind in FIXED ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
   const note = a.kind === "top" ? (Object.keys(mem.stale).length ? "TCGdex (the card database) isn’t responding right now, so some cards come from your saved copy." : "") : mem.notes[k];
