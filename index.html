@@ -507,7 +507,7 @@ const akey = a => a.lang + "|" + a.name;
 const EX_LIST = { kind: "ex", name: "EX / Mega EX", lang: "en" };
 // Full Arts: cards the owner adds one at a time (any card: full arts, promos, special versions).
 // Each entry keeps the card's basics so it shows even offline, plus the chosen version (vid/vlabel/tp).
-const FA_LIST = { kind: "fa", name: "Full Arts", lang: "en" };
+const FA_LIST = { kind: "fa", name: "Chase Cards", lang: "en" };
 state.fullArts = state.fullArts || [];
 // Which version (regular, reverse holo, 1st edition…) the owner has of a card, by card key → TCGdex variantId.
 // Full Arts entries keep their own choice (vid/vlabel/tp) instead.
@@ -517,8 +517,8 @@ delete state.sirSub;
 // Most valuable: every owned card from all categories, ranked by price (opened by clicking the binder total).
 const TOP_LIST = { kind: "top", name: "Most valuable cards", lang: "en" };
 const FIXED = { ex: EX_LIST, fa: FA_LIST, top: TOP_LIST };          // categories with one built-in tab
-const FIXED_TAB = { ex: "EX", fa: "Full Arts", top: "Most valuable" };
-const FIXED_TITLE = { ex: "EX", fa: "Full Arts", top: "Most valuable cards" };
+const FIXED_TAB = { ex: "EX", fa: "Chase Cards", top: "Most valuable" };
+const FIXED_TITLE = { ex: "EX", fa: "Chase Cards", top: "Most valuable cards" };
 const isFixedCat = cat => cat in FIXED;
 const fixedList = cat => FIXED[cat];
 const cardLang = (a, c) => c.lang || a.lang; // cards in "Most valuable" carry their own language
@@ -770,7 +770,7 @@ function tcgpMatch(c, lang){
     fetch(`sets/${gid}.json`).then(r => r.ok ? r.json() : null).catch(() => null).then(st => {
       const byNum = new Map(), byName = new Map();
       (st?.cards || []).forEach(x => {
-        const n = normName(x.n), e = { p: x.p, n, r: x.r || "",
+        const n = normName(x.n), e = { p: x.p, n, r: x.r || "", num: x.num,
           price: PRINT_ORDER.concat(Object.keys(x.s)).map(t => x.s[t]).find(v => v != null) ?? null };
         (byNum.get(normNum(x.num)) || byNum.set(normNum(x.num), []).get(normNum(x.num))).push(e);
         byName.set(n, byName.has(n) ? null : e); // null = name not unique
@@ -1019,11 +1019,41 @@ function keepDetails(lang, d, id = d.id){
   const plain = vs.filter(x => !x.stamp?.length && (x.size || "standard") === "standard");
   const main = ["holo", "normal", "reverse"].map(t => plain.find(x => x.type === t)).find(Boolean) || plain[0];
   const tp = main?.thirdParty?.tcgplayer;
-  state.details[k] = { r: d.rarity || "", s: d.set?.name || "" };
+  state.details[k] = { r: d.rarity || "", s: d.set?.name || "", ...(d.set?.cardCount?.official ? { o: d.set.cardCount.official } : {}) }; // o = set size, for "108/088"
   const cmk = d.pricing?.cardmarket, cm = cmk && (cmk.avg1 || cmk.avg7 || cmk.avg30) ? { a1: cmk.avg1, a7: cmk.avg7, a30: cmk.avg30 } : null;
   // Every version of the card, for the "Your version" picker: id, label, TCGplayer product and type.
   const list = vs.length > 1 ? vs.filter(x => x.variantId).map(x => ({ id: x.variantId, l: versionLabel(x), ty: x.type || "", ...(x.thirdParty?.tcgplayer ? { tp: x.thirdParty.tcgplayer } : {}) })) : [];
   state.prices[k] = { p: pickPrice(d.pricing), t: Date.now(), ...(tp ? { tp, mt: main.type || "" } : {}), ...(cm ? { cm } : {}), ...(Object.keys(v).length ? { v } : {}), ...(list.length > 1 ? { vs: list } : {}) };
+}
+
+// ----- Chase Cards (internally still "fa" / state.fullArts, so saved data and links keep working) -----
+// Owned cards of these rarities show up in Chase Cards by themselves, from any category (a master set, a
+// Pokémon or artist tab, EX). Ultra Rare only counts when numbered above the set size ("108/088"): those are
+// the textured full arts; older Ultra Rares are mostly plain V / GX cards.
+const CHASE_RARITIES = new Set(["full art trainer", "illustration rare", "special illustration rare", "mega attack rare", "hyper rare", "mega hyper rare"]);
+function isChase(lang, c){
+  const r = String(c.rarity || rarityOf(lang, c)).toLowerCase().trim();
+  if (CHASE_RARITIES.has(r)) return true;
+  if (r !== "ultra rare") return false;
+  const o = state.details[ckey(lang, c.id)]?.o; // set size from TCGdex, else from TCGplayer's "108/088"
+  const num = String(c.num).includes("/") ? c.num : o ? `${c.num}/${o}` : tcgpMatch(c, lang)?.num || "";
+  const [n, of] = String(num).split("/").map(x => parseInt(x, 10));
+  return n > 0 && of > 0 && n > of;
+}
+let chaseMemo = { sig: "", cards: [] };
+function autoChase(){
+  const lists = allLists().filter(a => a.kind !== "fa" && a.kind !== "top");
+  const sig = [Object.keys(state.owned).length, Object.keys(state.details).length, state.fullArts.length, Object.keys(groupFiles).length,
+    ...lists.map(a => (mem.cards[lkey(a)] || []).length)].join();
+  if (sig === chaseMemo.sig) return chaseMemo.cards;
+  const picked = new Set(state.fullArts.map(e => ckey(e.lang, e.id))), seen = new Map();
+  lists.forEach(a => (cardsOf(a) || []).forEach(c => {
+    const L = cardLang(a, c), k = idKey(a, c);
+    if (picked.has(k) || picked.has(ckey(L, c.id)) || !isOwned(a, c) || !isChase(L, c)) return;
+    if (keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: L, auto: true, setName: c.setName || setName(a, c), _p: priceOf(a, c) });
+  }));
+  chaseMemo = { sig, cards: [...seen.values()].map(({ _p, ...c }) => c) };
+  return chaseMemo.cards;
 }
 
 // ----- Full Arts helpers -----
@@ -1054,7 +1084,7 @@ function versionLabel(v){
 // Rarity/set are kept forever; prices are re-fetched when older than a day.
 async function fillDetails(a, ownedOnly = false){
   if (a.kind === "ms") return; // master-set lists come with their prices
-  const cards = cardsOf(a) || [];
+  const cards = (cardsOf(a) || []).filter(c => !c.auto); // cards Chase Cards picked up by themselves get their details in their own list
   const now = Date.now();
   const todo = cards.filter(c => {
     const k = ckey(cardLang(a, c), c.id), p = state.prices[k];
@@ -1089,7 +1119,7 @@ function isShowing(a){ const cur = activeList(); return !!cur && lkey(cur) === l
 // Cards in a list; for EX, narrowed to the chosen sub-tab (All / EX / Mega EX).
 function cardsOf(a, sub = state.exSub){
   if (a.kind === "top") return ownedEverywhere();
-  if (a.kind === "fa") return state.fullArts.map(e => ({ ...e, num: e.num || "", name: e.name || "Loading…", order: e.order ?? 0 }));
+  if (a.kind === "fa") return state.fullArts.map(e => ({ ...e, num: e.num || "", name: e.name || "Loading…", order: e.order ?? 0 })).concat(autoChase());
   const cards = mem.cards[lkey(a)];
   if (!cards || a.kind !== "ex" || sub === "all") return cards;
   return cards.filter(c => sub === "mega" ? isMega(c.name) : !isMega(c.name));
@@ -1133,7 +1163,7 @@ function langLabel(l){ return l === "en" || l === "tcgp" ? "" : " (" + l.toUpper
 function setName(a, c){ return c.setName || state.details[ckey(cardLang(a, c), c.id)]?.s || c.setId; }
 
 function renderCats(){
-  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Full Arts"], ["ms", "Master Sets"]].map(([v, label]) =>
+  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Chase Cards"], ["ms", "Master Sets"]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
   document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top" || state.cat === "home"); // no add box there
   document.body.classList.toggle("cat-home", state.cat === "home");
@@ -1310,7 +1340,7 @@ function renderGrid(){
           : (x,y) => x.order - y.order || byNum(x,y));
   st.className = "status";
   st.textContent = a.kind === "top" && !list.length ? (cards.length ? "No owned cards match these filters." : viewOnly ? "No cards marked as owned yet." : "Mark cards as owned in any category, and your most valuable ones show up here, highest price first.")
-    : cards.length === 0 && a.kind === "fa" ? (viewOnly ? "No full-art cards here yet." : "No cards yet. Type a card’s name in the “Add a card…” box above and click Add, then pick your card from the results. Add the card number to narrow it down, e.g. “Wobbuffet 203”.")
+    : cards.length === 0 && a.kind === "fa" ? (viewOnly ? "No chase cards here yet." : "No cards yet. Cards you own that are Illustration Rare, Special Illustration Rare, full-art Ultra Rare, Mega Attack Rare or gold (Hyper Rare) show up here by themselves, from any category. To add any other card, type its name in the “Add a card…” box above and click Add, then pick your card from the results. Add the card number to narrow it down, e.g. “Wobbuffet 203”.")
     : cards.length === 0 ? (a.kind in FIXED ? "TCGdex lists no cards here." : "TCGdex lists no cards for this artist in this language.")
     : list.length === 0 ? "No cards match these filters." : `Showing ${list.length} card${list.length===1?"":"s"}.`;
   const note = a.kind === "top" ? (Object.keys(mem.stale).length ? "TCGdex (the card database) isn’t responding right now, so some cards come from your saved copy." : "") : mem.notes[k];
@@ -1329,7 +1359,7 @@ function renderGrid(){
       <button class="toggle" aria-pressed="${own}" aria-label="${esc(c.name)}, ${esc(sn)} number ${esc(c.num)}">
         <span class="sleeve">${img}</span><span class="tag">${own?"Owned":"Missing"}</span></button>
       ${pic ? `<button class="zoom" data-zoom="${esc(pic.large)}" aria-label="Enlarge ${esc(c.name)}">⤢</button>` : ""}
-      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${vl || c.rarity || d.r ? `<span>${esc([vl, c.rarity || (vl ? "" : d.r)].filter(Boolean).join(" · "))}</span>` : ""}${priceTxt}${a.kind === "fa" && !viewOnly ? `<button class="remove" data-fa-remove="${esc(ckey(cardLang(a, c), c.id))}">Remove from Full Arts</button>` : ""}</div></li>`;
+      <div class="meta"><strong>${rank}${esc(c.name)}</strong><span>${esc(sn)} #${esc(c.num)}</span>${vl || c.rarity || d.r ? `<span>${esc([vl, c.rarity || (vl ? "" : d.r)].filter(Boolean).join(" · "))}</span>` : ""}${priceTxt}${a.kind === "fa" && !viewOnly && !c.auto ? `<button class="remove" data-fa-remove="${esc(ckey(cardLang(a, c), c.id))}">Remove from Chase Cards</button>` : ""}</div></li>`;
   }).join("");
   renderProgress(a);
   if (a.kind === "top") renderInsights();
@@ -1448,9 +1478,9 @@ function addFullArt(c, d, version, several){
 }
 function removeFullArt(k){
   const i = state.fullArts.findIndex(e => ckey(e.lang, e.id) === k); if (i < 0) return;
-  if (!confirm(`Remove ${state.fullArts[i].name} from Full Arts? (It stays marked as owned in your other categories.)`)) return;
+  if (!confirm(`Remove ${state.fullArts[i].name} from Chase Cards? (It stays marked as owned in your other categories.)`)) return;
   const [gone] = state.fullArts.splice(i, 1); save(); renderPicker(); render();
-  showUndo(`${gone.name} removed from Full Arts.`, () => { state.fullArts.splice(i, 0, gone); save(); render(); });
+  showUndo(`${gone.name} removed from Chase Cards.`, () => { state.fullArts.splice(i, 0, gone); save(); render(); });
 }
 document.addEventListener("click", e => {
   if (e.target.closest("[data-picker-close]")){ picker.q = ""; renderPicker(); return; }
@@ -1648,7 +1678,7 @@ function renderInsights(){
     all.forEach(e => [].concat(keyOf(e)).filter(Boolean).forEach(name => { const r = g.get(name) || { name, n: 0, v: 0 }; r.n++; r.v += usd(e); g.set(name, r); }));
     return { label, rows: [...g.values()] }; };
   const sections = [
-    group("By category", e => [e.fa && "Full Arts", e.ex && "EX / Mega EX", e.mss.size && "Master Sets", e.pokes.size && "In a Pokémon tab", e.artists.size && "In an artist tab"]),
+    group("By category", e => [e.fa && "Chase Cards", e.ex && "EX / Mega EX", e.mss.size && "Master Sets", e.pokes.size && "In a Pokémon tab", e.artists.size && "In an artist tab"]),
     group("By master set", e => [...e.mss]),
     group("By artist", e => [...e.artists]),
     group("By Pokémon", e => [...e.pokes]),
