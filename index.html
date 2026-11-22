@@ -1074,7 +1074,18 @@ function cardsOf(a, sub = state.exSub){
 }
 // A master-set printing can be linked to the same card from TCGdex (c.link, e.g. "en:30th-023"), so a Pikachu
 // marked in a Pokémon tab also counts in the master set (and the other way round) and is counted once in totals.
-const ownKeys = (a, c) => { const k = ckey(cardLang(a, c), c.id); return c.link ? [k, c.link] : [k]; };
+// The other direction too: a TCGdex card (in a Pokémon/artist tab) also checks the master-set entries linked to it,
+// so a card ticked in a master set before its link was found still shows as owned in the tabs.
+let revLinks = new Map(), revSig = null;
+function linkedFrom(k){
+  const arrs = state.masterSets.map(m => mem.cards[mkey(m)]), sig = knownSig + "|" + arrs.length;
+  if (sig !== revSig || arrs.some((x, i) => x !== revLinks.arrs?.[i])){
+    revLinks = new Map(); revLinks.arrs = arrs; revSig = sig;
+    arrs.forEach(cards => (cards || []).forEach(c => { if (c.link) (revLinks.get(c.link) || revLinks.set(c.link, []).get(c.link)).push(ckey("tcgp", c.id)); }));
+  }
+  return revLinks.get(k) || [];
+}
+const ownKeys = (a, c) => { const k = ckey(cardLang(a, c), c.id); return c.link ? [k, c.link] : [k, ...linkedFrom(k)]; };
 const isOwned = (a, c) => ownKeys(a, c).some(k => state.owned[k]);
 const idKey = (a, c) => c.link || ckey(cardLang(a, c), c.id); // one key per physical card
 function setOwned(a, c, on){ ownKeys(a, c).forEach(k => { if (on) state.owned[k] = true; else delete state.owned[k]; }); }
