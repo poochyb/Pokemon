@@ -331,8 +331,12 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 /* ----- Pokédex binder ----- */
 :root{--rare:#7A4FC4}
 @media (prefers-color-scheme: dark){ :root{--rare:#B596F2} }
-.dex-tools{flex:1 1 34rem}
-.dex-find{display:flex;gap:.35rem;flex:1 1 15rem;min-width:0}
+.dex-tools{flex:1 1 auto;flex-wrap:nowrap}
+.dex-find{display:flex;gap:.35rem;flex:1 1 15rem;min-width:9rem}
+body.cat-dex .tb-head{flex:1 1 18rem;flex-wrap:nowrap}
+.dex-h2{line-height:.95;white-space:nowrap}
+.dex-h2 small{display:block;font:700 .72rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.dex-listrow{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem;margin:.9rem 0 0;color:var(--muted);font-size:.85rem}
 .dex-find input{flex:1 1 auto;min-width:0}
 .dex-tools select{max-width:11rem}
 .dex-msg{flex-basis:100%;margin:0;font-size:.9rem}
@@ -454,10 +458,11 @@ dialog.dexdlg h3{margin:0}
   body.cat-dex .toolbar .count{font-size:.85rem}
   .dex-tools{gap:.3rem}
   .dex-tools .seg button{padding:.2rem .45rem}
+  .dex-tools{flex-wrap:wrap}
   .dex-find{flex-basis:100%}
+  .dex-listrow span{display:none}
   .dex-tools select{flex:1 1 4rem;min-width:0;max-width:none;padding:.2rem .3rem}
   .dex-page.folded .dex-pghead{margin:.2rem 0}
-  #dexListBtn{padding:.3rem .6rem}
   .dex-msg{font-size:.82rem;line-height:1.35}
   .dex-long{display:none}
 }
@@ -2297,14 +2302,13 @@ function dexToolbar(st){
   const tb = $("toolbar"); tb.hidden = false;
   if (tb.dataset.dex !== "1"){
     tb.dataset.dex = "1";
-    tb.innerHTML = `<div class="tb-head"><h2>Pokédex binder</h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
+    tb.innerHTML = `<div class="tb-head"><h2 class="dex-h2">Pokédex<small>binder</small></h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
       <div class="filters dex-tools">
         <form class="dex-find" id="dexFindForm"><input id="dexFind" list="dexNames" enterkeyhint="go" autocomplete="off" aria-label="Find a Pokémon by name or number"><datalist id="dexNames"></datalist><button class="btn" type="submit">Go</button></form>
         <select id="dexType" aria-label="Show one card type"><option value="">All types</option>${[...TYPE_ORDER].filter(c => c !== "Y").map(c => `<option value="${c}">${TCG_TYPES[c][1]} ${TCG_TYPES[c][0]}</option>`).join("")}</select>
         <select id="dexJump" aria-label="Jump to a region or page"><option value="">Jump…</option>
           <optgroup label="Region">${REGIONS.map(r => `<option value="${r[1]}">${r[0]} (#${r[1]}–${r[2]})</option>`).join("")}</optgroup>
           <optgroup label="Page">${Array.from({ length: DEX_PAGES }, (_, i) => `<option value="p${i + 1}">Page ${i + 1} (#${i * 16 + 1}–${i * 16 + 16})</option>`).join("")}<option value="${DEX_N}">Back cover (#1025)</option></optgroup></select>
-        <button class="btn light-dark" type="button" id="dexListBtn"><span class="dex-long">${viewOnly ? "Still needed" : "Missing list"}</span><span class="dex-short">List</span></button>
       </div>
       <p class="dex-msg dex-fnote" id="dexFilterNote" hidden></p>
       <p class="dex-msg" id="dexMsg" role="status"></p>`;
@@ -2326,6 +2330,7 @@ function renderDex(){
     dexCoverHtml.last = "";
     m.innerHTML = `<div class="dex">
       <section class="dex-regions" id="dexRegions"></section>
+      <div class="dex-listrow"><button class="btn" type="button" id="dexListBtn">📋 ${viewOnly ? "Still needed" : "Missing list"}</button><span>Every empty pocket by region or card type, ready to copy</span></div>
       <p class="dex-legend"><span><i class="lg s0"></i>Empty</span><span><i class="lg s1"></i>Have it</span>
         <span><b class="dex-hard">◆</b> Legendary or Mythical: hard to find in bulk</span><span>✎ Has a note</span><span class="dex-typekey">Card type: ${[...TYPE_ORDER].filter(c => c !== "Y").map(c => `<span>${typeIcon(c)} ${TCG_TYPES[c][0]}</span>`).join("")}</span>
         <span class="dex-howto">${viewOnly ? "Tap a name for details." : "Tap a pocket to mark it (tap again to clear). Tap a name to add a note."}</span></p>
@@ -2435,10 +2440,10 @@ $("toolbar").addEventListener("click", e => {
   const mk = e.target.closest("[data-dex-mark]");
   if (mk){ const n = +mk.dataset.dexMark; setDex(n, 1); $("dexMsg").innerHTML = `${dexWhere(n)} · ✓ marked`; dexGoTo(n, true); $("dexFind").focus(); return; }
   const p = e.target.closest("[data-dex-pick]"); if (p){ $("dexFind").value = ""; dexAct(+p.dataset.dexPick); return; }
-  if (e.target.closest("#dexListBtn")) openDexList();
 });
 $("main").addEventListener("click", e => {
   if (state.cat !== "dex") return;
+  if (e.target.closest("#dexListBtn")){ openDexList(); return; }
   const j = e.target.closest("[data-dex-jump]"); if (j){ dexGoTo(+j.dataset.dexJump, true); return; }
   const more = e.target.closest("[data-dex-more]"); if (more){ openDexDlg(+more.dataset.dexMore); return; }
   const t = e.target.closest("[data-dex]"); if (!t) return;
