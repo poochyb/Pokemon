@@ -337,6 +337,7 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 .dex-tools select{max-width:11rem}
 .dex-msg{flex-basis:100%;margin:0;font-size:.9rem}
 .dex-msg:empty{display:none}
+.dex-msg .dex-markbtn{background:var(--gold);color:#1C2433;border-color:var(--gold);padding:.2rem .8rem}
 .dex-msg button{font:inherit;font-size:.85rem;font-weight:700;margin:.1rem .15rem;padding:.1rem .6rem;border-radius:999px;border:1px solid currentColor;background:transparent;cursor:pointer}
 .dex-regions{display:grid;grid-template-columns:repeat(9,minmax(104px,1fr));gap:.5rem;overflow-x:auto;padding-bottom:.3rem;scrollbar-width:thin}
 .dex-reg{display:flex;flex-direction:column;gap:.25rem;background:var(--desk);border:0;border-radius:12px;padding:.45rem .6rem .5rem;text-align:left;color:inherit;cursor:pointer;min-width:0}
@@ -2223,11 +2224,9 @@ function dexToolbar(st){
   const tb = $("toolbar"); tb.hidden = false;
   if (tb.dataset.dex !== "1"){
     tb.dataset.dex = "1";
-    const modes = viewOnly ? [] : [["1", "Mark as have", "Mark"], ["find", "Just find", "Find"]];
     tb.innerHTML = `<div class="tb-head"><h2>Pokédex binder</h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
       <div class="filters dex-tools">
         <form class="dex-find" id="dexFindForm"><input id="dexFind" list="dexNames" enterkeyhint="go" autocomplete="off" aria-label="Find a Pokémon by name or number"><datalist id="dexNames"></datalist><button class="btn" type="submit">Go</button></form>
-        ${modes.length ? `<div class="seg" id="dexMode" role="group" aria-label="What Go does">${modes.map(([v, l, s]) => `<button type="button" data-dex-mode="${v}" aria-pressed="${ui.dexMode === v}"><span class="dex-long">${l}</span><span class="dex-short">${s}</span></button>`).join("")}</div>` : ""}
         <select id="dexJump" aria-label="Jump to a region or page"><option value="">Jump…</option>
           <optgroup label="Region">${REGIONS.map(r => `<option value="${r[1]}">${r[0]} (#${r[1]}–${r[2]})</option>`).join("")}</optgroup>
           <optgroup label="Page">${Array.from({ length: DEX_PAGES }, (_, i) => `<option value="p${i + 1}">Page ${i + 1} (#${i * 16 + 1}–${i * 16 + 16})</option>`).join("")}<option value="${DEX_N}">Back cover (#1025)</option></optgroup></select>
@@ -2235,15 +2234,10 @@ function dexToolbar(st){
       </div>
       <p class="dex-msg" id="dexMsg" role="status"></p>`;
     $("dexNames").innerHTML = (pokeNames?.en || []).map(n => `<option value="${esc(n)}">`).join("");
-    dexModeHint();
+    $("dexFind").placeholder = "Find a Pokémon: name or #…";
   }
   $("dexCount").innerHTML = `<strong>${st.have.toLocaleString()}</strong> of 1,025 filled <small>· ${(DEX_N - st.have).toLocaleString()} to go</small>`;
   $("dexBar").style.width = (st.have / DEX_N * 100) + "%";
-}
-ui.dexMode = ui.dexMode || "1"; // going through a stack of cards is the usual job
-function dexModeHint(){
-  const f = $("dexFind"); if (!f) return;
-  f.placeholder = viewOnly || ui.dexMode === "find" ? "Find a Pokémon or number…" : "Sorting a stack? Type a name or #…";
 }
 function renderDex(){
   const m = $("main");
@@ -2298,18 +2292,10 @@ function dexFind(q){
   const did = starts.length ? starts.slice(0, 6) : closeNames(q, pokeNames.en).map(nm => idx.get(dexNorm(nm))).filter(Boolean);
   return { n: 0, did, msg: did.length ? `No Pokémon called “${esc(q)}”. Did you mean` : `No Pokémon called “${esc(q)}”. Check the spelling, or type its Pokédex number.` };
 }
+// Go only finds: it shows the pocket and where it goes, with a button to mark it (or tap the pocket itself).
+function dexWhere(n){ const pos = dexPos(n); return `<b>${dexNo(n)} ${esc(dexName(n))}</b> → <b>${pos.text}</b>${pos.page ? ` <small>(sheet ${pos.sheet} ${pos.side})</small>` : ""}`; }
 function dexAct(n){
-  const nm = dexName(n), pos = dexPos(n), was = dexState(n), mode = viewOnly ? "find" : ui.dexMode;
-  const where = `<b>${dexNo(n)} ${esc(nm)}</b> → <b>${pos.text}</b>${pos.page ? ` <small>(sheet ${pos.sheet} ${pos.side})</small>` : ""}`;
-  let msg;
-  if (mode === "find") msg = `${where} · ${was ? "you have it" : "empty"}`;
-  else if (was) msg = `${where} · already have it`;
-  else {
-    setDex(n, 1);
-    msg = `✓ ${where} · marked`;
-    showUndo(`${nm} marked`, () => { setDex(n, 0); $("dexMsg").innerHTML = `Undone: ${esc(nm)} is empty again.`; });
-  }
-  $("dexMsg").innerHTML = msg;
+  $("dexMsg").innerHTML = `${dexWhere(n)} · ${dexState(n) ? "✓ you have it" : viewOnly ? "empty" : `empty <button type="button" class="dex-markbtn" data-dex-mark="${n}">✓ Mark it</button>`}`;
   dexGoTo(n, true);
 }
 function dexSubmit(){
@@ -2325,8 +2311,8 @@ $("toolbar").addEventListener("change", e => {
 });
 $("toolbar").addEventListener("click", e => {
   if (state.cat !== "dex") return;
-  const m = e.target.closest("[data-dex-mode]");
-  if (m){ ui.dexMode = m.dataset.dexMode; document.querySelectorAll("[data-dex-mode]").forEach(b => b.setAttribute("aria-pressed", b === m)); dexModeHint(); $("dexFind").focus(); return; }
+  const mk = e.target.closest("[data-dex-mark]");
+  if (mk){ const n = +mk.dataset.dexMark; setDex(n, 1); $("dexMsg").innerHTML = `${dexWhere(n)} · ✓ marked`; dexGoTo(n, true); $("dexFind").focus(); return; }
   const p = e.target.closest("[data-dex-pick]"); if (p){ $("dexFind").value = ""; dexAct(+p.dataset.dexPick); return; }
   if (e.target.closest("#dexListBtn")) openDexList();
 });
