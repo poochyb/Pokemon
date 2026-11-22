@@ -376,6 +376,13 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 .dex-no{position:absolute;top:.25rem;left:.3rem;font:700 .7rem/1 var(--display);color:var(--muted)}
 .dex-marks{position:absolute;top:.2rem;right:.25rem;display:flex;flex-direction:column;align-items:center;font-size:.72rem;line-height:1.1}
 .dex-noted{font-style:normal;color:var(--muted)}
+.dex-binder.filtering .dexp:not(.match){opacity:.18;filter:grayscale(1)}
+.dex-binder.filtering .dexp:not(.match) .dex-region{opacity:1}
+.dex-page.folded .dex-grid{display:none}
+.dex-page.folded .dex-pghead{opacity:.55;margin:.5rem 0 .2rem}
+.dex-spread:has(.dex-page.folded) .dex-cover{display:none}
+.dex-onlymiss{display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;cursor:pointer;margin:0 .3rem}
+.dex-fnote{color:var(--ink)}
 .dex-types{position:absolute;left:.25rem;bottom:.25rem;display:flex;gap:2px}
 .dt{display:inline-grid;place-items:center;width:1.25rem;height:1.25rem;border-radius:50%;font-style:normal;font-size:.72rem;line-height:1;
   background:var(--tc);box-shadow:0 0 0 1.5px var(--page);vertical-align:middle}
@@ -424,7 +431,8 @@ dialog.dexdlg h3{margin:0}
   .dex-tools{gap:.3rem}
   .dex-tools .seg button{padding:.2rem .45rem}
   .dex-find{flex-basis:100%}
-  .dex-tools select{flex:1 1 4rem;min-width:0;max-width:6.5rem;padding:.2rem .3rem}
+  .dex-tools select{flex:1 1 4rem;min-width:0;max-width:none;padding:.2rem .3rem}
+  .dex-page.folded .dex-pghead{margin:.2rem 0}
   #dexListBtn{padding:.3rem .6rem}
   .dex-msg{font-size:.82rem;line-height:1.35}
   .dex-long{display:none}
@@ -2208,7 +2216,7 @@ function dexPocket(n){
   const e = state.dex[n], s = dexState(n), nm = dexName(n), r = regionOf(n), hard = DEX_HARD.has(n), pos = dexPos(n);
   const label = ["Empty", "Have it"][s];
   const tip = `${dexNo(n)} ${nm} (${dexTypeText(n)}): ${label.toLowerCase()}${hard ? " · hard to find in bulk" : ""}${e?.n ? " · note: " + e.n : ""}`;
-  return `<li class="dexp s${s}" data-n="${n}" id="dex-${n}">${r[1] === n ? `<span class="dex-region">${r[0]}</span>` : ""}
+  return `<li class="dexp s${s} ${dexTypes(n).map(c => "ty-" + c).join(" ")}" data-n="${n}" id="dex-${n}">${r[1] === n ? `<span class="dex-region">${r[0]}</span>` : ""}
     <button class="dex-tap" data-dex="${n}" title="${esc(tip)}${viewOnly ? "" : ". Tap to switch between empty and have it"}" aria-label="${esc(tip)}">
       <span class="dex-sleeve"><img class="sprite" loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"><span class="dex-no">${n}</span><span class="dex-types">${dexTypeIcons(n)}</span><span class="dex-marks">${hard ? `<i class="dex-hard">◆</i>` : ""}${e?.n ? `<i class="dex-noted">✎</i>` : ""}</span>${s ? `<span class="dex-state">✓</span>` : ""}</span>
     </button>
@@ -2249,11 +2257,13 @@ function dexToolbar(st){
     tb.innerHTML = `<div class="tb-head"><h2>Pokédex binder</h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
       <div class="filters dex-tools">
         <form class="dex-find" id="dexFindForm"><input id="dexFind" list="dexNames" enterkeyhint="go" autocomplete="off" aria-label="Find a Pokémon by name or number"><datalist id="dexNames"></datalist><button class="btn" type="submit">Go</button></form>
+        <select id="dexType" aria-label="Show one card type"><option value="">All types</option>${[...TYPE_ORDER].filter(c => c !== "Y").map(c => `<option value="${c}">${TCG_TYPES[c][1]} ${TCG_TYPES[c][0]}</option>`).join("")}</select>
         <select id="dexJump" aria-label="Jump to a region or page"><option value="">Jump…</option>
           <optgroup label="Region">${REGIONS.map(r => `<option value="${r[1]}">${r[0]} (#${r[1]}–${r[2]})</option>`).join("")}</optgroup>
           <optgroup label="Page">${Array.from({ length: DEX_PAGES }, (_, i) => `<option value="p${i + 1}">Page ${i + 1} (#${i * 16 + 1}–${i * 16 + 16})</option>`).join("")}<option value="${DEX_N}">Back cover (#1025)</option></optgroup></select>
         <button class="btn light-dark" type="button" id="dexListBtn"><span class="dex-long">${viewOnly ? "Still needed" : "Missing list"}</span><span class="dex-short">List</span></button>
       </div>
+      <p class="dex-msg dex-fnote" id="dexFilterNote" hidden></p>
       <p class="dex-msg" id="dexMsg" role="status"></p>`;
     $("dexNames").innerHTML = (pokeNames?.en || []).map(n => `<option value="${esc(n)}">`).join("");
     $("dexFind").placeholder = "Find a Pokémon: name or #…";
@@ -2281,6 +2291,7 @@ function renderDex(){
     for (let p = 1; p <= DEX_PAGES; p++){ const h = dexPageHead(p); if (h !== dexLast.heads[p]){ dexLast.heads[p] = h; const el = $("dexhead-" + p); if (el) el.outerHTML = h; } }
   }
   const rh = dexRegionsHtml(st); if ($("dexRegions").innerHTML !== rh) $("dexRegions").innerHTML = rh;
+  applyDexFilter();
   if ($("dexDlg").open) fillDexDlg();
 }
 function setDex(n, s){
@@ -2326,13 +2337,40 @@ function dexSubmit(){
   $("dexMsg").innerHTML = (r.msg || "") + (r.did?.length ? " " + r.did.map(n => `<button type="button" data-dex-pick="${n}">${esc(dexName(n))}</button>`).join("") + "?" : "");
 }
 $("toolbar").addEventListener("submit", e => { if (e.target.id !== "dexFindForm") return; e.preventDefault(); dexSubmit(); });
+// Type filter: fades every pocket of another type (the binder layout stays as it is), optionally the filled ones too,
+// and folds pages with no matching pocket so there's less to scroll past. A Fairy-only Pokémon counts as Psychic too.
+const dexFilter = { type: "", missing: false };
+const dexMatch = n => (!dexFilter.type || dexTypes(n).some(c => c === dexFilter.type || (c === "Y" && dexFilter.type === "P"))) && (!dexFilter.missing || !dexState(n));
+function applyDexFilter(){
+  const bind = $("dexBinder"); if (!bind) return;
+  const on = !!dexFilter.type || dexFilter.missing;
+  bind.classList.toggle("filtering", on);
+  if ($("dexType")) $("dexType").value = dexFilter.type;
+  let shown = 0, miss = 0;
+  for (let n = 1; n <= DEX_N; n++){
+    const el = $("dex-" + n); if (!el) continue;
+    const m = dexMatch(n); el.classList.toggle("match", m);
+    if (m){ shown++; if (!dexState(n)) miss++; }
+  }
+  bind.querySelectorAll(".dex-page").forEach(pg => pg.classList.toggle("folded", on && !pg.querySelector(".dexp.match")));
+  const tag = $("dexFilterNote");
+  if (tag){
+    if (!dexFilter.type) tag.hidden = true;
+    else { const [nm, ic] = TCG_TYPES[dexFilter.type]; tag.hidden = false;
+      tag.innerHTML = `${ic} <b>${nm}</b>: ${shown} Pokémon${dexFilter.missing ? " still missing" : ` · ${miss} still missing`}. Pages without any are folded.
+        <label class="dex-onlymiss"><input type="checkbox" id="dexOnlyMiss"${dexFilter.missing ? " checked" : ""}> Missing only</label> <button type="button" data-dex-clear>Show all</button>`; }
+  }
+}
 $("toolbar").addEventListener("change", e => {
+  if (e.target.id === "dexType"){ dexFilter.type = e.target.value; if (!dexFilter.type) dexFilter.missing = false; applyDexFilter(); dexGoPage(1); return; }
+  if (e.target.id === "dexOnlyMiss"){ dexFilter.missing = e.target.checked; applyDexFilter(); return; }
   if (e.target.id !== "dexJump") return;
   const v = e.target.value; e.target.value = ""; if (!v) return;
   if (v[0] === "p") dexGoPage(+v.slice(1)); else dexGoTo(+v, true);
 });
 $("toolbar").addEventListener("click", e => {
   if (state.cat !== "dex") return;
+  if (e.target.closest("[data-dex-clear]")){ dexFilter.type = ""; dexFilter.missing = false; applyDexFilter(); return; }
   const mk = e.target.closest("[data-dex-mark]");
   if (mk){ const n = +mk.dataset.dexMark; setDex(n, 1); $("dexMsg").innerHTML = `${dexWhere(n)} · ✓ marked`; dexGoTo(n, true); $("dexFind").focus(); return; }
   const p = e.target.closest("[data-dex-pick]"); if (p){ $("dexFind").value = ""; dexAct(+p.dataset.dexPick); return; }
