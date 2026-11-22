@@ -693,5 +693,25 @@ async function loadMachines(){
   setInterval(renderFeed, 60000);   // keep "x min ago" fresh
 })();
 </script>
+<!-- Back to top: a round button in the bottom-right corner, shown once the page is scrolled down a bit. -->
+<style>
+.totop{position:fixed;right:max(1rem,env(safe-area-inset-right));bottom:calc(1rem + env(safe-area-inset-bottom));z-index:40;
+  display:flex;align-items:center;gap:.35rem;padding:.6rem .95rem;border:0;border-radius:999px;background:var(--gold);color:#1C2433;
+  font:700 .95rem/1 var(--body);cursor:pointer;box-shadow:0 6px 18px rgba(10,14,22,.35);transition:opacity .2s,transform .2s}
+.totop svg{width:1.05rem;height:1.05rem}
+.totop.off{opacity:0;transform:translateY(.8rem);pointer-events:none}
+@media print{ .totop{display:none} }
+</style>
+<button class="totop off" id="toTop" type="button" aria-label="Back to the top of the page" title="Back to top" tabindex="-1">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l-7 7m7-7l7 7M12 5v14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Top</button>
+<script>
+(() => {
+  const b = document.getElementById("toTop");
+  const show = () => { const on = scrollY > innerHeight * .8; b.classList.toggle("off", !on); b.tabIndex = on ? 0 : -1; };
+  addEventListener("scroll", show, { passive: true }); addEventListener("resize", show); show();
+  // Long pages (like the Pokédex binder) jump straight up; gliding past every card would make them all load first.
+  b.addEventListener("click", () => window.scrollTo({ top: 0, behavior: scrollY > innerHeight * 3 ? "instant" : "smooth" }));
+})();
+</script>
 </body>
 </html>
