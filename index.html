@@ -1166,9 +1166,9 @@ function autoChase(){
   lists.forEach(a => (cardsOf(a) || []).forEach(c => {
     const L = cardLang(a, c), k = idKey(a, c);
     if (picked.has(k) || picked.has(ckey(L, c.id)) || !isOwned(a, c) || !(isChase(L, c) || pricedOver(a, c))) return;
-    if (keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: L, auto: true, setName: c.setName || setName(a, c), _p: priceOf(a, c) });
+    if (keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: L, auto: true, setName: c.setName || setName(a, c), _p: priceOf(a, c), _ms: a.kind === "ms" });
   }));
-  chaseMemo = { sig, cards: [...seen.values()].map(({ _p, ...c }) => c) };
+  chaseMemo = { sig, cards: [...seen.values()].map(({ _p, _ms, ...c }) => c) };
   return chaseMemo.cards;
 }
 
@@ -1244,32 +1244,51 @@ function cardsOf(a, sub = state.exSub){
 // marked in a Pokémon tab also counts in the master set (and the other way round) and is counted once in totals.
 // The other direction too: a TCGdex card (in a Pokémon/artist tab) also checks the master-set entries linked to it,
 // so a card ticked in a master set before its link was found still shows as owned in the tabs.
-let revLinks = new Map(), revSig = null;
-function linkedFrom(k){
+// Any printing counts in the tabs: a card shows as owned in a Pokémon/artist tab when any of its master-set
+// printings (regular, holo, reverse holo…) is ticked, not just the linked first printing (allPrintingsOf).
+let revLinks = new Map(), revAll = new Map(), revSig = null;
+function buildRevLinks(){
   const arrs = state.masterSets.map(m => mem.cards[mkey(m)]), sig = knownSig + "|" + arrs.length;
   if (sig !== revSig || arrs.some((x, i) => x !== revLinks.arrs?.[i])){
-    revLinks = new Map(); revLinks.arrs = arrs; revSig = sig;
-    arrs.forEach(cards => (cards || []).forEach(c => { if (c.link) (revLinks.get(c.link) || revLinks.set(c.link, []).get(c.link)).push(ckey("tcgp", c.id)); }));
+    revLinks = new Map(); revAll = new Map(); revLinks.arrs = arrs; revSig = sig;
+    const push = (m, k, v) => (m.get(k) || m.set(k, []).get(k)).push(v);
+    arrs.forEach(cards => { if (!cards) return;
+      const byPid = new Map(); cards.forEach(c => push(byPid, c.pid, ckey("tcgp", c.id)));
+      cards.forEach(c => { if (!c.link) return; push(revLinks, c.link, ckey("tcgp", c.id)); (byPid.get(c.pid) || []).forEach(x => push(revAll, c.link, x)); }); });
   }
-  return revLinks.get(k) || [];
 }
+function linkedFrom(k){ buildRevLinks(); return revLinks.get(k) || []; }
+function allPrintingsOf(k){ buildRevLinks(); return revAll.get(k) || []; }
 const ownKeys = (a, c) => { const k = ckey(cardLang(a, c), c.id); return c.link ? [k, c.link] : [k, ...linkedFrom(k)]; };
-const isOwned = (a, c) => ownKeys(a, c).some(k => state.owned[k]);
-const idKey = (a, c) => c.link || ckey(cardLang(a, c), c.id); // one key per physical card
-function setOwned(a, c, on){ ownKeys(a, c).forEach(k => { if (on) state.owned[k] = true; else delete state.owned[k]; }); }
+const isTabCard = (a, c) => !c.link && cardLang(a, c) !== "tcgp"; // a TCGdex card (Pokémon/artist/EX/Chase tabs)
+const otherPrintingOwned = (a, c) => isTabCard(a, c) ? allPrintingsOf(ckey(cardLang(a, c), c.id)).find(k => state.owned[k]) : undefined;
+const isOwned = (a, c) => ownKeys(a, c).some(k => state.owned[k]) || !!otherPrintingOwned(a, c);
+// One key per physical card, so totals count it once. A tab card owned only through another printing (say the
+// reverse holo in a master set) is that printing, so it isn't counted a second time.
+const idKey = (a, c) => { if (c.link) return c.link; const k = ckey(cardLang(a, c), c.id);
+  return ownKeys(a, c).some(x => state.owned[x]) ? k : otherPrintingOwned(a, c) || k; };
+// Marking a tab card owned ticks only its own (first) printing; marking it missing clears every printing.
+function setOwned(a, c, on){
+  const keys = on || !isTabCard(a, c) ? ownKeys(a, c) : [...new Set([...ownKeys(a, c), ...allPrintingsOf(ckey(cardLang(a, c), c.id))])];
+  const was = keys.filter(k => state.owned[k]);
+  keys.forEach(k => { if (on) state.owned[k] = true; else delete state.owned[k]; });
+  return was; // the keys that were ticked before (so Undo can put back exactly those)
+}
 function ownedCount(a, sub){ return (cardsOf(a, sub) || []).filter(c => isOwned(a, c)).length; }
 function allLists(){ return [FA_LIST, ...state.artists, ...state.pokemon, EX_LIST, ...state.masterSets]; }
 // Every owned card from every loaded list, each once, tagged with its language.
 // A card owned in two lists (say a Pokémon tab and a master set) counts once: the first copy, unless only a later one has a price.
-function keepFirstPriced(seen, k, a, c){ const e = seen.get(k); return !e || (!e._p?.p && !!priceOf(a, c)?.p); }
+// A printing-only match (key "tcgp:…") prefers the master-set copy, which has that printing's own price.
+function keepFirstPriced(seen, k, a, c){ const e = seen.get(k); if (!e) return true;
+  const p = priceOf(a, c)?.p; return (!e._p?.p && !!p) || (!!p && a.kind === "ms" && !e._ms && k.startsWith("tcgp:")); }
 function ownedEverywhere(){
   linkFromKnown();
   const seen = new Map();
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
     const k = idKey(a, c);
-    if (isOwned(a, c) && keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: cardLang(a, c), _p: priceOf(a, c) });
+    if (isOwned(a, c) && keepFirstPriced(seen, k, a, c)) seen.set(k, { ...c, lang: cardLang(a, c), _p: priceOf(a, c), _ms: a.kind === "ms" });
   }));
-  return [...seen.values()].map(({ _p, ...c }) => c);
+  return [...seen.values()].map(({ _p, _ms, ...c }) => c);
 }
 // The add-able lists (artists or Pokémon) for the current category, and which one is open.
 const userLists = () => state.cat === "poke" ? state.pokemon : state.cat === "ms" ? state.masterSets : state.artists;
@@ -1408,7 +1427,7 @@ function renderTotal(){
   const seen = new Map();
   allLists().forEach(a => (cardsOf(a) || []).forEach(c => {
     const k = idKey(a, c);
-    if (isOwned(a, c) && keepFirstPriced(seen, k, a, c)) seen.set(k, { _p: priceOf(a, c) });
+    if (isOwned(a, c) && keepFirstPriced(seen, k, a, c)) seen.set(k, { _p: priceOf(a, c), _ms: a.kind === "ms" });
   }));
   seen.forEach((v, k) => seen.set(k, v._p));
   $("total").hidden = seen.size === 0;
@@ -1977,8 +1996,8 @@ $("priceDlg").addEventListener("click", e => { if (e.target === $("priceDlg")) $
 $("pdImg").addEventListener("click", () => { $("zoomImg").src = $("pdImg").dataset.zoom; $("zoomDlg").showModal(); });
 $("pdMissing").addEventListener("click", () => {
   const { a, c } = ph; $("priceDlg").close();
-  setOwned(a, c, false); save(); render();
-  showUndo(`${c.name} marked as missing.`, () => { setOwned(a, c, true); save(); render(); });
+  const was = setOwned(a, c, false); save(); render();
+  showUndo(`${c.name} marked as missing.`, () => { was.forEach(k => state.owned[k] = true); save(); render(); });
 });
 
 // A small message at the bottom with an Undo button, shown for 8 seconds.
