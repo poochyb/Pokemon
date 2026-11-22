@@ -106,6 +106,8 @@ main::before{content:"";position:absolute;left:calc(var(--gutter) * .45);top:0;b
 
 .status{color:var(--muted);margin:0 0 1rem}
 .status.err{color:var(--danger)}
+.didyou{display:block;margin-top:.5rem;color:var(--ink)}
+.didyou button{font:inherit;font-weight:700;margin:.15rem .2rem;padding:.25rem .7rem;border-radius:999px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}
 
 .grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1.25rem 1rem}
 .pocket{position:relative}
@@ -463,7 +465,7 @@ state.details = state.details || {};
 state.prices = state.prices || {};
 const PRICE_MAX_AGE = 24 * 60 * 60 * 1000; // refresh prices once a day
 const ui = { view: "all", q: "", set: "", sort: state.sort || "name" };
-const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {}, stale: {}, notes: {}, retry: {} };
+const mem = { sets: {}, names: {}, cards: {}, errors: {}, loading: {}, stale: {}, notes: {}, retry: {}, notFound: {} };
 
 // Saved copies of every card list, so cards don't vanish if TCGdex is down (kept apart from your checkmarks).
 const LIST_KEY = "artistBinder.lists.v1";
@@ -484,6 +486,7 @@ function remember(k){
 }
 // TCGdex didn't answer: show the saved copy if there is one, and try again in a minute.
 function useSaved(a, k, msg){
+  delete mem.notFound[k];
   const saved = listCache[k];
   if (saved?.cards?.length && (!mem.cards[k] || mem.stale[k])){
     mem.cards[k] = saved.cards; mem.stale[k] = true; delete mem.errors[k];
@@ -825,7 +828,7 @@ async function loadArtist(a){
     const msg = e.status === 404
       ? `TCGdex has no artist named “${a.name}” for these cards. Names must match exactly; pick one from the suggestions as you type.`
       : `Couldn’t reach TCGdex (${e.message}).`;
-    if (e.status === 404) mem.errors[k] = msg; else useSaved(a, k, msg);
+    if (e.status === 404){ mem.errors[k] = msg; mem.notFound[k] = true; } else useSaved(a, k, msg);
   } finally { delete mem.loading[k]; render(); }
 }
 
@@ -839,8 +842,25 @@ function isCardOf(cardName, poke){
   const re = new RegExp("(^|[^a-z0-9])" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^a-z0-9-]|-(ex|gx)\\b)");
   return re.test(n);
 }
+// Use the capitals printed on the cards for a tab's name ("misty" → "Misty"). Only the capitals change, and the
+// tab's saved list moves with it. Returns the tab's (possibly new) key.
+function fixPokeSpelling(a, k){
+  if (viewOnly) return k;
+  const want = a.name.toLowerCase(), counts = new Map();
+  mem.cards[k].forEach(c => { const i = c.name.toLowerCase().indexOf(want);
+    if (i >= 0){ const w = c.name.slice(i, i + a.name.length); if (w.toLowerCase() === want) counts.set(w, (counts.get(w) || 0) + 1); } });
+  const best = [...counts].sort((x, y) => y[1] - x[1])[0]?.[0];
+  if (!best || best === a.name || state.pokemon.some(p => p !== a && p.lang === a.lang && p.name === best)) return k;
+  a.name = best; const nk = lkey(a);
+  ["cards", "errors", "stale", "notes"].forEach(f => { if (k in mem[f]){ mem[f][nk] = mem[f][k]; delete mem[f][k]; } });
+  if (listCache[k]){ listCache[nk] = listCache[k]; delete listCache[k]; }
+  if (state.activePoke === k) state.activePoke = nk;
+  save();
+  return nk;
+}
 async function loadPokemon(a){
-  const k = lkey(a);
+  let k = lkey(a);
+  const k0 = k;
   if ((mem.cards[k] && !mem.stale[k]) || mem.loading[k]) return;
   mem.loading[k] = true; render();
   try {
@@ -855,13 +875,15 @@ async function loadPokemon(a){
       return { id: c.id, num: c.localId, name: c.name, image: c.image || "", setId: sid,
                setName: sets[sid]?.name || "", order: sets[sid]?.idx ?? 99999 };
     });
-    delete mem.errors[k]; remember(k);
-    if (!mem.cards[k].length) mem.errors[k] = `TCGdex has no cards named “${a.name}” in this language. Check the spelling, or pick a name from the suggestions as you type.`;
+    delete mem.errors[k];
+    k = fixPokeSpelling(a, k); // "misty" → "Misty", as printed on the cards
+    remember(k);
+    if (!mem.cards[k].length){ mem.errors[k] = `TCGdex has no cards named “${a.name}” in this language. Check the spelling, or pick a name from the suggestions as you type.`; mem.notFound[k] = true; }
     a.total = mem.cards[k].length; save();
     fillDetails(a);
   } catch(e){
     useSaved(a, k, `Couldn’t reach TCGdex (${e.message}).`);
-  } finally { delete mem.loading[k]; render(); }
+  } finally { delete mem.loading[k0]; render(); }
 }
 
 // TCGplayer's set list (sets/index.json) for the "Add a set…" suggestions and names.
@@ -1263,7 +1285,11 @@ function renderProgress(a){
 function renderGrid(){
   const a = activeList(); if (!a || !$("grid")) return;
   const k = lkey(a), cards = cardsOf(a), st = $("status");
-  if (mem.errors[k]) { st.textContent = mem.errors[k]; st.className = "status err"; $("grid").innerHTML = ""; return; }
+  if (mem.errors[k]) {
+    const sug = mem.notFound[k] && !viewOnly ? closeNames(a.name, knownNames(a)) : [];
+    st.innerHTML = esc(mem.errors[k]) + (sug.length ? `<span class="didyou">Did you mean ${sug.map(n => `<button data-rename="${esc(n)}">${esc(n)}</button>`).join(" ")}?</span>` : "");
+    st.className = "status err"; $("grid").innerHTML = ""; return;
+  }
   if (!cards) { st.textContent = "Loading cards from TCGdex…"; st.className = "status"; $("grid").innerHTML = ""; return; }
   const q = ui.q.trim().toLowerCase();
   let list = cards.filter(c => {
@@ -1309,15 +1335,54 @@ function renderGrid(){
   if (a.kind === "top") renderInsights();
 }
 
+// ----- Spelling help for artist / Pokémon names -----
+// The names we know: Pokémon species (pokemon-names.json) or TCGdex's illustrator list.
+const knownNames = a => (a.kind === "poke" ? pokeNames?.[a.lang] : mem.names[a.lang]) || [];
+const spellKey = s => pokeNorm(s).replace(/[^a-z0-9\u0080-\uffff]/g, "");
+// The same name written with other capitals, accents, spaces or dots ("kouki saitou" → "Kouki Saitou").
+const exactName = (name, list) => list.find(n => spellKey(n) === spellKey(name));
+function editDistance(x, y){
+  let prev = Array.from({ length: y.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= x.length; i++){
+    const cur = [i];
+    for (let j = 1; j <= y.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x[i - 1] === y[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[y.length];
+}
+// Up to 4 close spellings ("Pikachoo" → Pikachu), closest first.
+function closeNames(name, list){
+  const w = spellKey(name); if (!w) return [];
+  const max = w.length <= 4 ? 1 : w.length <= 8 ? 2 : 3;
+  return list.map(n => { const v = spellKey(n); return [n, editDistance(w, v) - (v.startsWith(w) || w.startsWith(v) ? 0.5 : 0)]; })
+    .filter(([, d]) => d <= max).sort((x, y) => x[1] - y[1]).slice(0, 4).map(([n]) => n);
+}
+// Rename a tab to the spelling picked under "Did you mean…?" (or open that tab if it already exists).
+function renameTab(a, name){
+  const list = a.kind === "poke" ? state.pokemon : state.artists, old = lkey(a);
+  const dup = list.find(x => x !== a && x.lang === a.lang && x.name === name);
+  ["cards", "errors", "stale", "notes", "notFound"].forEach(f => delete mem[f][old]);
+  delete listCache[old];
+  if (dup) list.splice(list.indexOf(a), 1); else a.name = name;
+  const nk = lkey(dup || a);
+  if (a.kind === "poke") state.activePoke = nk; else state.active = nk;
+  save(); render(); loadArtist(dup || a);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-rename]"); if (!b) return;
+  const a = activeList(); if (a && (a.kind === "poke" || !a.kind)) renameTab(a, b.dataset.rename);
+});
+
 // Events
 $("langInput").addEventListener("change", e => { fillDatalist(e.target.value); loadNames(e.target.value); });
 $("addForm").addEventListener("submit", e => {
   e.preventDefault();
-  const name = $("artistInput").value.trim(), lang = $("langInput").value;
+  let name = $("artistInput").value.trim(); const lang = $("langInput").value;
   if (!name) return;
   if (state.cat === "fa"){ searchCards(name, lang); $("artistInput").value = ""; return; }
   if (state.cat === "ms"){ addMasterSet(name); return; }
   if (isFixedCat(state.cat)) state.cat = "artists";
+  name = exactName(name, knownNames({ kind: state.cat === "poke" ? "poke" : "", lang })) || name; // "pikachu" → "Pikachu"
   const a = state.cat === "poke" ? { name, lang, kind: "poke" } : { name, lang }, list = userLists();
   if (!list.some(x => lkey(x) === lkey(a))) list.push(a);
   setActiveKey(lkey(a)); ui.set = ""; ui.q = "";
