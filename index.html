@@ -355,7 +355,28 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 .dex-hard{color:var(--rare);font-style:normal}
 .dex-spread{display:grid;grid-template-columns:1fr 1fr;gap:0 3rem;position:relative;margin-top:.6rem}
 .dex-spread::before{content:"";position:absolute;top:2.6rem;bottom:.2rem;left:50%;border-left:2px dashed var(--line);opacity:.7}
-.dex-cover{margin-top:2.6rem;border:2px dashed var(--line);border-radius:12px;display:grid;place-items:center;color:var(--muted);font:700 .9rem var(--display);opacity:.7}
+/* Inside front cover: a holo panel with a collage of Pokémon you've filled in, and the binder's title */
+.dex-cover{margin-top:2.6rem;position:relative;overflow:hidden;border-radius:14px;background:#141C2C;color:#F2F5FA;min-height:20rem;
+  box-shadow:inset 0 0 0 2px rgba(217,154,30,.55),0 10px 26px rgba(10,14,22,.25);isolation:isolate}
+.dex-cover::before{content:"";position:absolute;inset:-20%;z-index:-1;opacity:.55;
+  background:conic-gradient(from 210deg at 50% 50%,#5FD3E633,#9B8CFF40,#FF8FC833,#F6C45340,#5FD3E633);filter:blur(30px);animation:dexholo 18s linear infinite}
+@keyframes dexholo{to{transform:rotate(360deg)}}
+.dex-collage{position:absolute;inset:.6rem;display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:1fr;gap:.2rem;place-items:center}
+.dex-collage button{border:0;background:none;padding:0;cursor:pointer;width:100%;height:100%;display:grid;place-items:center;transform:rotate(var(--r)) scale(var(--s));transition:transform .2s}
+.dex-collage button:hover{transform:rotate(0) scale(calc(var(--s) * 1.25));z-index:3}
+.dex-collage img{width:100%;max-width:96px;aspect-ratio:1;object-fit:contain;opacity:.92;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45))}
+.dex-collage .ghost img{opacity:.16;filter:grayscale(1) brightness(1.6)}
+.dex-cover-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;text-align:center;padding:1rem 1.4rem 1.1rem;border-radius:16px;
+  background:rgba(14,20,32,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 0 0 1px rgba(255,255,255,.12),0 12px 30px rgba(0,0,0,.45);min-width:min(80%,16rem)}
+.dex-cover-title small{display:block;font:700 .8rem/1 var(--body);letter-spacing:.32em;color:#F0B743;text-transform:uppercase;margin-bottom:.35rem}
+.dex-cover-title b{display:block;font:800 clamp(2rem,4.2vw,3.1rem)/1 var(--display);letter-spacing:-.03em;
+  background:linear-gradient(100deg,#5FD3E6,#9B8CFF 35%,#FF8FC8 60%,#F6C453);-webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:200% 100%;animation:dexshine 8s ease-in-out infinite alternate}
+@keyframes dexshine{to{background-position:100% 0}}
+.dex-cover-title .sub{display:block;margin-top:.55rem;font-size:.85rem;opacity:.85}
+.dex-cover-title .bar{display:block;height:6px;margin:.45rem auto 0;max-width:12rem;background:rgba(255,255,255,.18)}
+.dex-cover-foot{position:absolute;left:0;right:0;bottom:.45rem;z-index:2;text-align:center;font:600 .62rem/1 var(--body);letter-spacing:.18em;text-transform:uppercase;opacity:.38}
+@media (prefers-reduced-motion:reduce){ .dex-cover::before,.dex-cover-title b{animation:none} }
 .dex-page{min-width:0}
 .dex-pghead{display:flex;align-items:center;gap:.55rem;margin:1.1rem 0 .55rem;color:var(--muted);font-size:.8rem;white-space:nowrap}
 .dex-pghead::before{content:"";flex:0 0 1rem;border-top:2px dashed var(--line)}
@@ -417,7 +438,10 @@ dialog.dexdlg h3{margin:0}
 .dex-home small{white-space:normal}
 @media (max-width:900px){
   .dex-spread{grid-template-columns:1fr;margin-top:0}
-  .dex-spread::before,.dex-cover{display:none}
+  .dex-spread::before{display:none}
+  .dex-cover{margin-top:.6rem;min-height:0;height:15rem}
+  .dex-collage{grid-template-columns:repeat(8,1fr)}
+  .dex-collage button:nth-child(n+25){display:none}
   .dex-back .dex-grid{width:calc(25% + .3rem)}
 }
 @media (max-width:640px){
@@ -2297,8 +2321,9 @@ function renderDex(){
   dexToolbar(st);
   if (!$("dexBinder")){
     dexLast = { pockets: {}, heads: {} };
-    let spreads = `<div class="dex-spread first"><div class="dex-cover"><span>Inside front cover</span></div>${dexPageHtml(1)}</div>`;
+    let spreads = `<div class="dex-spread first"><div class="dex-cover" id="dexCover"></div>${dexPageHtml(1)}</div>`;
     for (let p = 2; p <= DEX_PAGES; p += 2) spreads += `<div class="dex-spread">${dexPageHtml(p)}${p + 1 <= DEX_PAGES ? dexPageHtml(p + 1) : dexBackCover()}</div>`;
+    dexCoverHtml.last = "";
     m.innerHTML = `<div class="dex">
       <section class="dex-regions" id="dexRegions"></section>
       <p class="dex-legend"><span><i class="lg s0"></i>Empty</span><span><i class="lg s1"></i>Have it</span>
@@ -2310,8 +2335,25 @@ function renderDex(){
     for (let p = 1; p <= DEX_PAGES; p++){ const h = dexPageHead(p); if (h !== dexLast.heads[p]){ dexLast.heads[p] = h; const el = $("dexhead-" + p); if (el) el.outerHTML = h; } }
   }
   const rh = dexRegionsHtml(st); if ($("dexRegions").innerHTML !== rh) $("dexRegions").innerHTML = rh;
+  const ch = dexCoverHtml(st); if ($("dexCover") && dexCoverHtml.last !== ch){ dexCoverHtml.last = ch; $("dexCover").innerHTML = ch; }
   applyDexFilter();
   if ($("dexDlg").open) fillDexDlg();
+}
+// The inside front cover: a collage of Pokémon you've filled in (a new mix each day; tap one to jump to its
+// pocket), topped up with faint starters and favorites while the binder is still fairly empty.
+const COVER_EXTRAS = [25, 1, 4, 7, 133, 151, 6, 150, 249, 250, 384, 448, 94, 143, 39, 52, 54, 129, 131, 175, 196, 197, 282, 359, 445, 470, 471,
+  571, 609, 658, 700, 778, 887, 906, 909, 912, 1000, 152, 155, 158, 252, 255, 258];
+function dexCoverHtml(st){
+  const day = Math.floor(Date.now() / 86400000), h = n => Math.imul(n ^ day * 2654435761, 2246822519) >>> 0;
+  const filled = []; for (let n = 1; n <= DEX_N; n++) if (dexState(n)) filled.push(n);
+  const pick = filled.sort((x, y) => h(x) - h(y)).slice(0, 35).map(n => ({ n }));
+  for (const n of COVER_EXTRAS){ if (pick.length >= 35) break; if (!dexState(n)) pick.push({ n, ghost: true }); }
+  pick.sort((x, y) => h(x.n * 7 + 3) - h(y.n * 7 + 3));
+  const pct = Math.round(st.have / DEX_N * 1000) / 10;
+  return `<div class="dex-collage" aria-hidden="true">${pick.map(({ n, ghost }) => { const r = h(n * 31) % 25 - 12, s = .85 + (h(n * 17) % 40) / 100;
+      return `<button type="button" tabindex="-1" class="${ghost ? "ghost" : ""}" data-dex-jump="${n}" title="${esc(dexName(n))}" style="--r:${r}deg;--s:${s}"><img loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"></button>`; }).join("")}</div>
+    <div class="dex-cover-title"><small>PYB’s</small><b>Pokédex</b><span class="sub">${st.have.toLocaleString()} of 1,025 caught · ${pct}%</span><span class="bar"><span style="width:${pct}%"></span></span></div>
+    <div class="dex-cover-foot">Inside front cover</div>`;
 }
 function setDex(n, s){
   const e = { ...(state.dex[n] || {}) };
