@@ -327,6 +327,101 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 #zoomDlg button{margin-top:.75rem;width:100%}
 
 @media (max-width:1400px){ .total .lbl{display:none} }
+
+/* ----- Pokédex binder ----- */
+:root{--rare:#7A4FC4}
+@media (prefers-color-scheme: dark){ :root{--rare:#B596F2} }
+.dex-tools{flex:1 1 34rem}
+.dex-find{display:flex;gap:.35rem;flex:1 1 15rem;min-width:0}
+.dex-find input{flex:1 1 auto;min-width:0}
+.dex-tools select{max-width:11rem}
+.dex-msg{flex-basis:100%;margin:0;font-size:.9rem}
+.dex-msg:empty{display:none}
+.dex-msg button{font:inherit;font-size:.85rem;font-weight:700;margin:.1rem .15rem;padding:.1rem .6rem;border-radius:999px;border:1px solid currentColor;background:transparent;cursor:pointer}
+.dex-regions{display:grid;grid-template-columns:repeat(9,minmax(104px,1fr));gap:.5rem;overflow-x:auto;padding-bottom:.3rem;scrollbar-width:thin}
+.dex-reg{display:flex;flex-direction:column;gap:.25rem;background:var(--desk);border:0;border-radius:12px;padding:.45rem .6rem .5rem;text-align:left;color:inherit;cursor:pointer;min-width:0}
+.dex-reg:hover{box-shadow:0 6px 14px rgba(10,14,22,.14)}
+.dex-reg .bar{flex:none;width:100%;min-width:0;height:6px}
+.dex-reg-top{display:flex;justify-content:space-between;gap:.4rem;font-family:var(--display)}
+.dex-reg-top span{color:var(--muted);font-size:.85rem}
+.dex-reg small{color:var(--muted);font-size:.75rem}
+.dex-reg.done{outline:2px solid var(--gold)}
+.dex-legend{display:flex;flex-wrap:wrap;gap:.3rem 1rem;align-items:center;margin:.8rem 0 0;color:var(--muted);font-size:.83rem}
+.dex-legend span{display:inline-flex;align-items:center;gap:.35rem}
+.dex-legend .lg{display:inline-block;width:.85rem;height:1.15rem;border-radius:3px;background:var(--page);outline:1.5px dashed var(--line);outline-offset:-1.5px}
+.dex-legend .lg.s1{outline:2px dashed var(--accent);outline-offset:-2px}
+.dex-legend .lg.s2{outline:2.5px solid var(--gold);outline-offset:-2.5px}
+.dex-howto{flex-basis:100%}
+.dex-hard{color:var(--rare);font-style:normal}
+.dex-spread{display:grid;grid-template-columns:1fr 1fr;gap:0 3rem;position:relative;margin-top:.6rem}
+.dex-spread::before{content:"";position:absolute;top:2.6rem;bottom:.2rem;left:50%;border-left:2px dashed var(--line);opacity:.7}
+.dex-cover{margin-top:2.6rem;border:2px dashed var(--line);border-radius:12px;display:grid;place-items:center;color:var(--muted);font:700 .9rem var(--display);opacity:.7}
+.dex-page{min-width:0}
+.dex-pghead{display:flex;align-items:center;gap:.55rem;margin:1.1rem 0 .55rem;color:var(--muted);font-size:.8rem;white-space:nowrap}
+.dex-pghead::before{content:"";flex:0 0 1rem;border-top:2px dashed var(--line)}
+.dex-pghead i{flex:1 1 auto;border-top:2px dashed var(--line)}
+.dex-pghead small{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dex-pgname{font:800 .95rem var(--display);color:var(--ink)}
+.dex-pghead b{font-family:var(--display)}
+.dex-pghead.done b{color:var(--gold)}
+.dex-grid{list-style:none;margin:0;padding:.55rem;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem .5rem;background:var(--desk);border-radius:12px}
+.dex-back .dex-grid{grid-template-columns:minmax(0,1fr);width:calc(25% + .3rem)}
+.dex-backnote{color:var(--muted);font-size:.85rem;margin:.5rem 0 0}
+.dexp{position:relative;min-width:0}
+.dex-tap{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;color:inherit}
+.dex-sleeve{display:block;position:relative;aspect-ratio:63/88;border-radius:7px;overflow:hidden;background:var(--page);outline:1.5px dashed var(--line);outline-offset:-1.5px}
+.dex-sleeve .sprite{position:absolute;inset:0;margin:auto;width:96%;max-width:120px;aspect-ratio:1;object-fit:contain;filter:grayscale(1);opacity:.32}
+.s1 .dex-sleeve{outline:2px dashed var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 9%,var(--page))}
+.s2 .dex-sleeve{outline:3px solid var(--gold);outline-offset:-3px;background:color-mix(in srgb,var(--gold) 12%,var(--page))}
+.s1 .sprite,.s2 .sprite{filter:none;opacity:1}
+.dex-no{position:absolute;top:.25rem;left:.3rem;font:700 .7rem/1 var(--display);color:var(--muted)}
+.dex-marks{position:absolute;top:.2rem;right:.25rem;display:flex;flex-direction:column;align-items:center;font-size:.72rem;line-height:1.1}
+.dex-noted{font-style:normal;color:var(--muted)}
+.dex-state{position:absolute;left:0;right:0;bottom:0;text-align:center;font:700 .66rem/1.6 var(--body);background:var(--accent);color:var(--page)}
+.s2 .dex-state{background:var(--gold);color:#1C2433}
+.dex-more{display:block;width:100%;border:0;background:none;padding:.15rem 0 0;font-size:.75rem;line-height:1.25;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.dex-more:hover{text-decoration:underline}
+.dex-region{position:absolute;top:-.6rem;left:50%;transform:translateX(-50%);z-index:2;background:var(--cover);color:var(--gold);font:700 .6rem/1 var(--display);padding:.22rem .45rem;border-radius:99px;white-space:nowrap;letter-spacing:.05em;text-transform:uppercase}
+.flash .dex-sleeve{animation:dexflash 2s ease-out}
+@keyframes dexflash{0%,55%{box-shadow:0 0 0 4px var(--gold),0 0 18px 4px var(--gold)}100%{box-shadow:none}}
+dialog.dexdlg h3{margin:0}
+.dex-dhead{display:flex;gap:.8rem;align-items:center;margin-bottom:.7rem}
+.dex-dhead img{width:84px;height:84px;object-fit:contain;flex:none;background:var(--desk);border-radius:12px}
+.dex-dhead p{margin:.15rem 0 0;color:var(--muted);font-size:.9rem}
+.dex-dhead .dex-dhard{color:var(--rare)}
+.dex-dnote{display:flex;flex-direction:column;gap:.2rem;margin:.8rem 0 .4rem;font-size:.9rem;color:var(--muted)}
+.dex-dnote input{padding:.35rem .6rem;border:1px solid var(--line);border-radius:8px;background:var(--page)}
+.dexdlg h4,.dexlist h4{font:800 1rem var(--display);margin:.9rem 0 .3rem}
+.dex-listbody{max-height:55vh;overflow:auto;margin-top:.4rem}
+.dexlist h4 small{color:var(--muted);font-weight:400}
+.dex-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.1rem .6rem}
+.dex-list button{border:0;background:none;padding:.15rem 0;cursor:pointer;text-align:left;width:100%;font-size:.9rem}
+.dex-list button span{display:inline-block;min-width:2.3rem;color:var(--muted);font-family:var(--display)}
+.dex-list small{color:var(--muted)}
+.dex-home small{white-space:normal}
+@media (max-width:900px){
+  .dex-spread{grid-template-columns:1fr;margin-top:0}
+  .dex-spread::before,.dex-cover{display:none}
+  .dex-back .dex-grid{width:calc(25% + .3rem)}
+}
+@media (max-width:640px){
+  .dex-grid{padding:.4rem;gap:.5rem .35rem}
+  .dex-more{font-size:.68rem}
+  .dex-tools select{flex:1 1 40%}
+  .dex-howto{display:none}
+  body.cat-dex .toolbar{padding-top:.35rem;padding-bottom:.35rem;gap:.3rem}
+  body.cat-dex .toolbar h2{display:none}
+  body.cat-dex .toolbar .count{font-size:.85rem}
+  .dex-tools{gap:.3rem}
+  .dex-tools .seg button{padding:.2rem .45rem}
+  .dex-find{flex-basis:100%}
+  .dex-tools select{flex:1 1 4rem;min-width:0;max-width:6.5rem;padding:.2rem .3rem}
+  #dexListBtn{padding:.3rem .6rem}
+  .dex-msg{font-size:.82rem;line-height:1.35}
+  .dex-long{display:none}
+}
+.dex-short{display:none}
+@media (max-width:640px){ .dex-short{display:inline} }
 @media (max-width:640px){
   h1{font-size:1.1rem}
   .add{flex-basis:100%;order:3}
@@ -454,6 +549,8 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
   </div>
   <div class="pd-foot"><button id="pdMissing">I don’t have this card (mark as missing)</button><button class="btn" onclick="this.closest('dialog').close()">Close</button></div>
 </dialog>
+<dialog id="dexDlg" class="share dexdlg" aria-label="Pocket details"><div id="dexDlgBody"></div></dialog>
+<dialog id="dexListDlg" class="share dexlist" aria-labelledby="dexListTitle"><h3 id="dexListTitle">Pokédex checklist</h3><div id="dexListBody"></div></dialog>
 <dialog id="zoomDlg"><img id="zoomImg" alt=""><button class="btn" id="zoomClose">Close</button></dialog>
 
 <script>
@@ -594,7 +691,7 @@ async function loadNames(lang){
 }
 // Suggestions while typing: artist names from TCGdex, or Pokémon names from pokemon-names.json (from PokeAPI).
 let pokeNames = null;
-fetch("pokemon-names.json").then(r => r.ok ? r.json() : null).then(d => { pokeNames = d; fillDatalist($("langInput").value); }).catch(() => {});
+fetch("pokemon-names.json").then(r => r.ok ? r.json() : null).then(d => { pokeNames = d; fillDatalist($("langInput").value); if (state.cat === "dex" || state.cat === "home") render(); }).catch(() => {});
 function fillDatalist(lang){
   const names = state.cat === "ms" ? (setIndex || []).map(g => g.name)
     : state.cat === "poke" || state.cat === "fa" ? (pokeNames?.[lang] || pokeNames?.en || []) : (mem.names[lang] || []);
@@ -1117,7 +1214,7 @@ function activeArtist(){ return state.artists.find(a => akey(a) === state.active
 // The list on screen: the chosen artist, or the EX category.
 function activePoke(){ return state.pokemon.find(p => pkey(p) === state.activePoke) || null; }
 function activeMs(){ return state.masterSets.find(m => mkey(m) === state.activeMs) || null; }
-function activeList(){ if (state.cat === "home") return null; return fixedList(state.cat) || (state.cat === "poke" ? activePoke() : state.cat === "ms" ? activeMs() : activeArtist()); }
+function activeList(){ if (state.cat === "home" || state.cat === "dex") return null; return fixedList(state.cat) || (state.cat === "poke" ? activePoke() : state.cat === "ms" ? activeMs() : activeArtist()); }
 function isShowing(a){ const cur = activeList(); return !!cur && lkey(cur) === lkey(a); }
 // Cards in a list; for EX, narrowed to the chosen sub-tab (All / EX / Mega EX).
 function cardsOf(a, sub = state.exSub){
@@ -1166,18 +1263,19 @@ function langLabel(l){ return l === "en" || l === "tcgp" ? "" : " (" + l.toUpper
 function setName(a, c){ return c.setName || state.details[ckey(cardLang(a, c), c.id)]?.s || c.setId; }
 
 function renderCats(){
-  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Chase Cards"], ["ms", "Master Sets"]].map(([v, label]) =>
+  $("cats").innerHTML = [["artists", "Artists"], ["poke", "Pokémon"], ["ex", "EX / Mega EX"], ["fa", "Chase Cards"], ["ms", "Master Sets"], ["dex", "Pokédex"]].map(([v, label]) =>
     `<button data-cat="${v}" aria-pressed="${state.cat === v}">${label}</button>`).join("");
-  document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top" || state.cat === "home"); // no add box there
+  document.body.classList.toggle("cat-fixed", state.cat === "ex" || state.cat === "top" || state.cat === "home" || state.cat === "dex"); // no add box there
   document.body.classList.toggle("cat-home", state.cat === "home");
   document.body.classList.toggle("cat-ms", state.cat === "ms"); // master sets: no language menu
-  document.body.classList.toggle("no-tabs", isFixedCat(state.cat) || state.cat === "home"); // EX, Full Arts, Most valuable, home: no sub-tabs
+  document.body.classList.toggle("cat-dex", state.cat === "dex");
+  document.body.classList.toggle("no-tabs", isFixedCat(state.cat) || state.cat === "home" || state.cat === "dex"); // EX, Full Arts, Most valuable, home: no sub-tabs
   $("total").classList.toggle("on", state.cat === "top");
 }
 
 function renderTabs(){
   renderCats();
-  if (drag || state.cat === "home") return; // don't redraw tabs mid-drag (endDrag redraws them); home has none
+  if (drag || state.cat === "home" || state.cat === "dex") return; // don't redraw tabs mid-drag (endDrag redraws them); home has none
   if (state.cat === "top" || state.cat === "fa"){
     const a = FIXED[state.cat], cards = cardsOf(a);
     const [, tip] = cards ? pctLabel(ownedCount(a), cards.length) : ["…", "Loading…"];
@@ -1239,8 +1337,10 @@ function render(){
   renderTabs();
   renderTotal();
   const a = activeList(), m = $("main"), tb = $("toolbar");
+  if (state.cat !== "dex") delete tb.dataset.dex; // the Pokédex toolbar is drawn once, then only updated
   if (state.cat === "home"){ tb.hidden = true; renderHome(); return; }
   homeHtml = "";
+  if (state.cat === "dex"){ renderDex(); return; }
   if (!a){
     tb.hidden = true;
     m.innerHTML = state.cat === "ms" ? `<div class="empty"><h2>Start a master set</h2>
@@ -1881,7 +1981,7 @@ $("zoomClose").addEventListener("click", () => $("zoomDlg").close());
 $("zoomDlg").addEventListener("click", e => { if (e.target === $("zoomDlg")) $("zoomDlg").close(); });
 
 // What a backup holds (the Backup file and the cloud backup use the same format).
-const backupData = () => ({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, masterSets: state.masterSets.map(x => ({ name: x.name, groups: x.groups })), versions: state.versions, seeded: state.seeded, owned: state.owned });
+const backupData = () => ({ artists: state.artists, pokemon: state.pokemon.map(p => ({ name: p.name, lang: p.lang })), fullArts: state.fullArts, masterSets: state.masterSets.map(x => ({ name: x.name, groups: x.groups })), versions: state.versions, seeded: state.seeded, dex: state.dex, owned: state.owned });
 function applyBackup(d){
   if (!Array.isArray(d?.artists) || !d.owned || typeof d.owned !== "object") throw new Error("not a backup");
   state.artists = d.artists.map(a => ({ name: a.name, lang: a.lang || "en" }));
@@ -1891,6 +1991,7 @@ function applyBackup(d){
   if (Array.isArray(d.masterSets)){ state.masterSets = d.masterSets.map(x => ({ name: x.name, groups: x.groups, lang: "tcgp", kind: "ms" })); state.activeMs = state.masterSets[0] ? mkey(state.masterSets[0]) : null; }
   state.versions = d.versions && typeof d.versions === "object" ? d.versions : {};
   if (Array.isArray(d.seeded)) state.seeded = [...new Set([...state.seeded, ...d.seeded])];
+  if (d.dex && typeof d.dex === "object") state.dex = d.dex; // backups from before the Pokédex binder leave it as is
   state.owned = d.owned; state.active = state.artists[0] ? akey(state.artists[0]) : null;
   save(); render(); allLists().forEach(loadArtist);
 }
@@ -2014,6 +2115,7 @@ function renderHome(){
       <div class="tiles">${state.artists.map(a => listTile(a, "artists")).join("")}</div></section>` : ""}
     ${state.pokemon.length ? `<section><div class="hsec"><h3>Favorite Pokémon</h3></div>
       <div class="tiles">${state.pokemon.map(p => listTile(p, "poke")).join("")}</div></section>` : ""}
+    ${dexHomeHtml(V)}
     ${msInfo.length ? `<section><div class="hsec"><h3>Master sets</h3></div><div class="msrows">${msInfo.map(x => `<button class="msrow" data-go="ms" data-key="${esc(mkey(x.m))}">
         <span class="msrow-top"><b>${esc(x.m.name)}</b><span>${x.all ? x.pct + "%" : ""}</span></span>
         <span class="bar"><span style="width:${x.pct || 0}%"></span></span>
@@ -2041,6 +2143,277 @@ $("main").addEventListener("click", e => {
   if (isOwned(a, c) || viewOnly) openPriceHistory(a, c);
   else goTo(a.kind === "poke" ? "poke" : a.kind === "ms" ? "ms" : a.kind in FIXED ? a.kind : "artists", a.kind in FIXED ? null : lk);
 });
+
+// ----- Pokédex binder -----
+// One pocket per Pokémon in National Pokédex order, laid out like the owner's 4×4 binder: 16 pockets a page,
+// 64 pages = 1,024 pockets, so #1025 Pecharunt goes in a sleeve inside the back cover. Page 1 is on the right
+// when the binder opens (front of sheet 1), then pages 2–3, 4–5… side by side. Each pocket is empty, bulk
+// (a placeholder card, to upgrade later) or a keeper (the card you want to keep there).
+// It is tracked on its own: cards owned in other categories (kept in other physical binders) don't count here.
+// state.dex = { "25": { s: 1 bulk | 2 keeper, n: "note" } }
+state.dex = state.dex && typeof state.dex === "object" && !Array.isArray(state.dex) ? state.dex : {};
+const DEX_N = 1025, DEX_POCKETS = 1024, DEX_PAGE = 16, DEX_PAGES = DEX_POCKETS / DEX_PAGE;
+const REGIONS = [["Kanto", 1, 151], ["Johto", 152, 251], ["Hoenn", 252, 386], ["Sinnoh", 387, 493], ["Unova", 494, 649],
+                 ["Kalos", 650, 721], ["Alola", 722, 809], ["Galar", 810, 905], ["Paldea", 906, 1025]];
+// Legendary, Mythical and Ultra Beast Pokémon: they rarely turn up as cheap commons in bulk.
+const DEX_HARD = new Set([144, 145, 146, 150, 151, 243, 244, 245, 249, 250, 251, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386,
+  480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649,
+  716, 717, 718, 719, 720, 721, 772, 773, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802,
+  803, 804, 805, 806, 807, 808, 809, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 905, 1001, 1002, 1003, 1004, 1007, 1008,
+  1014, 1015, 1016, 1017, 1024, 1025]);
+const dexName = n => pokeNames?.en?.[n - 1] || "#" + n;
+const dexNo = n => "#" + String(n).padStart(4, "0");
+const spriteUrl = n => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${n}.png`;
+const dexState = n => state.dex[n]?.s || 0;
+const regionOf = n => REGIONS.find(r => n >= r[1] && n <= r[2]);
+function dexPos(n){
+  if (n > DEX_POCKETS) return { back: true, text: "Inside the back cover (extra sleeve or toploader)" };
+  const page = Math.ceil(n / DEX_PAGE), i = (n - 1) % DEX_PAGE, row = Math.floor(i / 4) + 1, col = i % 4 + 1;
+  return { page, row, col, sheet: Math.ceil(page / 2), side: page % 2 ? "front" : "back", text: `Page ${page} · row ${row} · pocket ${col}` };
+}
+// Which Pokémon a name means, for the find box: "Alolan Vulpix" → 37, "Mr. Mime ex" → 122, "Pikachu V" → 25.
+const dexNorm = s => pokeNorm(s).replace(/-(ex|gx)\b/g, " ").replace(/[.:,!?()&/]/g, " ").replace(/\s+/g, " ").trim();
+let dexIndex = null;
+function dexLookup(){
+  if (!dexIndex && pokeNames?.en){ dexIndex = new Map(); pokeNames.en.forEach((nm, i) => dexIndex.set(dexNorm(nm), i + 1)); }
+  return dexIndex;
+}
+function dexOfCard(name){
+  const idx = dexLookup(); if (!idx || !name) return 0;
+  const w = dexNorm(name).split(" ");
+  for (let len = 3; len >= 1; len--) for (let i = 0; i + len <= w.length; i++){ const n = idx.get(w.slice(i, i + len).join(" ")); if (n) return n; }
+  return 0;
+}
+function dexPocket(n){
+  const e = state.dex[n], s = e?.s || 0, nm = dexName(n), r = regionOf(n), hard = DEX_HARD.has(n), pos = dexPos(n);
+  const label = ["Empty", "Bulk", "Keeper"][s];
+  const tip = `${dexNo(n)} ${nm}: ${label.toLowerCase()}${hard ? " · hard to find in bulk" : ""}${e?.n ? " · note: " + e.n : ""}`;
+  return `<li class="dexp s${s}" data-n="${n}" id="dex-${n}">${r[1] === n ? `<span class="dex-region">${r[0]}</span>` : ""}
+    <button class="dex-tap" data-dex="${n}" title="${esc(tip)}${viewOnly ? "" : ". Tap: empty → bulk → keeper"}" aria-label="${esc(tip)}">
+      <span class="dex-sleeve"><img class="sprite" loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"><span class="dex-no">${n}</span><span class="dex-marks">${hard ? `<i class="dex-hard">◆</i>` : ""}${e?.n ? `<i class="dex-noted">✎</i>` : ""}</span>${s ? `<span class="dex-state">${label}</span>` : ""}</span>
+    </button>
+    <button class="dex-more" data-dex-more="${n}" aria-label="Details for ${esc(nm)}${pos.page ? ", " + pos.text : ""}">${esc(nm)}</button></li>`;
+}
+function dexPageHead(p){
+  const from = (p - 1) * DEX_PAGE + 1, to = p * DEX_PAGE, pos = dexPos(from);
+  let have = 0; for (let n = from; n <= to; n++) if (dexState(n)) have++;
+  const regs = REGIONS.filter(r => r[1] <= to && r[2] >= from).map(r => r[0]).join(" → ");
+  return `<div class="dex-pghead${have === DEX_PAGE ? " done" : ""}" id="dexhead-${p}"><span class="dex-pgname">Page ${p}</span><small>Sheet ${pos.sheet} ${pos.side} · ${regs}</small><i></i><b>${have === DEX_PAGE ? "✓ Page complete" : have + " / 16"}</b></div>`;
+}
+let dexLast = null; // the HTML last drawn for each pocket and page heading, so a change only redraws what changed
+function dexPageHtml(p){
+  let items = "";
+  for (let n = (p - 1) * DEX_PAGE + 1; n <= p * DEX_PAGE; n++){ const h = dexPocket(n); dexLast.pockets[n] = h; items += h; }
+  const head = dexPageHead(p); dexLast.heads[p] = head;
+  return `<section class="dex-page" id="dexpage-${p}">${head}<ol class="dex-grid">${items}</ol></section>`;
+}
+function dexBackCover(){
+  const h = dexPocket(DEX_N); dexLast.pockets[DEX_N] = h;
+  return `<section class="dex-page dex-back" id="dexpage-back"><div class="dex-pghead"><span class="dex-pgname">Inside back cover</span><i></i></div>
+    <ol class="dex-grid">${h}</ol><p class="dex-backnote">Your binder has 1,024 pockets, so the last Pokémon, #1025 Pecharunt, goes in a toploader or spare sleeve tucked inside the back cover.</p></section>`;
+}
+function dexStats(){
+  let bulk = 0, keep = 0; const reg = REGIONS.map(() => 0);
+  for (let n = 1; n <= DEX_N; n++){ const s = dexState(n); if (!s) continue; if (s === 2) keep++; else bulk++; reg[REGIONS.indexOf(regionOf(n))]++; }
+  return { bulk, keep, have: bulk + keep, reg };
+}
+function dexRegionsHtml(st){
+  return REGIONS.map(([name, a, b], i) => { const all = b - a + 1, pct = Math.round(st.reg[i] / all * 100), p = dexPos(a);
+    return `<button class="dex-reg${st.reg[i] === all ? " done" : ""}" data-dex-jump="${a}" title="Jump to ${name} (starts on page ${p.page || "back cover"})"><span class="dex-reg-top"><b>${name}</b><span>${pct}%</span></span>
+      <span class="bar"><span style="width:${pct}%"></span></span><small>${st.reg[i]} / ${all} · p.${p.page}</small></button>`; }).join("");
+}
+function dexToolbar(st){
+  const tb = $("toolbar"); tb.hidden = false;
+  if (tb.dataset.dex !== "1"){
+    tb.dataset.dex = "1";
+    const modes = viewOnly ? [] : [["find", "Find", "Find"], ["1", "Mark bulk", "Bulk"], ["2", "Mark keeper", "Keeper"]];
+    tb.innerHTML = `<div class="tb-head"><h2>Pokédex binder</h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
+      <div class="filters dex-tools">
+        <form class="dex-find" id="dexFindForm"><input id="dexFind" list="dexNames" enterkeyhint="go" autocomplete="off" aria-label="Find a Pokémon by name or number"><datalist id="dexNames"></datalist><button class="btn" type="submit">Go</button></form>
+        ${modes.length ? `<div class="seg" id="dexMode" role="group" aria-label="What Go does">${modes.map(([v, l, s]) => `<button type="button" data-dex-mode="${v}" aria-pressed="${ui.dexMode === v}"><span class="dex-long">${l}</span><span class="dex-short">${s}</span></button>`).join("")}</div>` : ""}
+        <select id="dexJump" aria-label="Jump to a region or page"><option value="">Jump…</option>
+          <optgroup label="Region">${REGIONS.map(r => `<option value="${r[1]}">${r[0]} (#${r[1]}–${r[2]})</option>`).join("")}</optgroup>
+          <optgroup label="Page">${Array.from({ length: DEX_PAGES }, (_, i) => `<option value="p${i + 1}">Page ${i + 1} (#${i * 16 + 1}–${i * 16 + 16})</option>`).join("")}<option value="${DEX_N}">Back cover (#1025)</option></optgroup></select>
+        <button class="btn light-dark" type="button" id="dexListBtn"><span class="dex-long">${viewOnly ? "Still needed" : "Missing list"}</span><span class="dex-short">List</span></button>
+      </div>
+      <p class="dex-msg" id="dexMsg" role="status"></p>`;
+    $("dexNames").innerHTML = (pokeNames?.en || []).map(n => `<option value="${esc(n)}">`).join("");
+    dexModeHint();
+  }
+  $("dexCount").innerHTML = `<strong>${st.have.toLocaleString()}</strong> of 1,025 filled <small>· ${st.keep} keeper${st.keep === 1 ? "" : "s"} · ${st.bulk} bulk</small>`;
+  $("dexBar").style.width = (st.have / DEX_N * 100) + "%";
+}
+ui.dexMode = ui.dexMode || "1"; // sorting bulk is the usual job
+function dexModeHint(){
+  const f = $("dexFind"); if (!f) return;
+  f.placeholder = viewOnly || ui.dexMode === "find" ? "Find a Pokémon or number…" : ui.dexMode === "2" ? "Keeper to file: name or #…" : "Sorting bulk? Type a name or #…";
+}
+function renderDex(){
+  const m = $("main");
+  if (!pokeNames){ $("toolbar").hidden = true; m.innerHTML = `<p class="status">Loading the Pokédex…</p>`; return; }
+  const st = dexStats();
+  dexToolbar(st);
+  if (!$("dexBinder")){
+    dexLast = { pockets: {}, heads: {} };
+    let spreads = `<div class="dex-spread first"><div class="dex-cover"><span>Inside front cover</span></div>${dexPageHtml(1)}</div>`;
+    for (let p = 2; p <= DEX_PAGES; p += 2) spreads += `<div class="dex-spread">${dexPageHtml(p)}${p + 1 <= DEX_PAGES ? dexPageHtml(p + 1) : dexBackCover()}</div>`;
+    m.innerHTML = `<div class="dex">
+      <section class="dex-regions" id="dexRegions"></section>
+      <p class="dex-legend"><span><i class="lg s0"></i>Empty</span><span><i class="lg s1"></i>Bulk: a cheap card holding the spot for now</span><span><i class="lg s2"></i>Keeper: the card you want to keep there</span>
+        <span><b class="dex-hard">◆</b> Hard to find in bulk</span><span>✎ Has a note</span>
+        <span class="dex-howto">${viewOnly ? "Tap a name for details." : "Tap a pocket to change it: empty → bulk → keeper. Tap a name to add a note."}</span></p>
+      <div class="dex-binder" id="dexBinder">${spreads}</div></div>`;
+  } else {
+    for (let n = 1; n <= DEX_N; n++){ const h = dexPocket(n); if (h !== dexLast.pockets[n]){ dexLast.pockets[n] = h; const el = $("dex-" + n); if (el) el.outerHTML = h; } }
+    for (let p = 1; p <= DEX_PAGES; p++){ const h = dexPageHead(p); if (h !== dexLast.heads[p]){ dexLast.heads[p] = h; const el = $("dexhead-" + p); if (el) el.outerHTML = h; } }
+  }
+  const rh = dexRegionsHtml(st); if ($("dexRegions").innerHTML !== rh) $("dexRegions").innerHTML = rh;
+  if ($("dexDlg").open) fillDexDlg();
+}
+function setDex(n, s){
+  const e = { ...(state.dex[n] || {}) };
+  if (s) e.s = s; else delete e.s;
+  if (!e.s && !e.n) delete state.dex[n]; else state.dex[n] = e;
+  save(); renderDex();
+}
+// Short moves glide; long jumps go straight there (gliding past hundreds of pockets would load all their pictures first).
+function dexScroll(top){ top = Math.max(0, top); window.scrollTo({ top, behavior: Math.abs(top - scrollY) > innerHeight * 3 ? "instant" : "smooth" }); }
+const topbarH = () => Math.max(0, topbar.offsetHeight + (parseFloat(topbar.style.top) || 0)); // the part still pinned while scrolling
+function dexGoTo(n, flash){
+  const el = $("dex-" + n); if (!el) return;
+  const r = el.getBoundingClientRect(), tb = topbarH(), room = innerHeight - tb;
+  dexScroll(r.top + scrollY - tb - Math.max(8, (room - r.height) / 2));
+  if (flash){ el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+}
+function dexGoPage(p){
+  const el = $("dexpage-" + p); if (!el) return;
+  dexScroll(el.getBoundingClientRect().top + scrollY - topbarH() - 8);
+}
+// "pikachu", "#25", "25", "Pikachu ex", "Alolan Vulpix" → 25 / 37; otherwise close spellings to choose from.
+function dexFind(q){
+  q = q.trim().replace(/^#\s*/, ""); if (!q) return { n: 0 };
+  if (/^\d+$/.test(q)){ const n = +q; return n >= 1 && n <= DEX_N ? { n } : { n: 0, msg: `There’s no #${esc(q)}. The Pokédex goes from 1 to 1,025.` }; }
+  const idx = dexLookup(), t = dexNorm(q);
+  if (idx.has(t)) return { n: idx.get(t) };
+  const inCard = dexOfCard(q); if (inCard) return { n: inCard };
+  const starts = [...idx.entries()].filter(([k]) => k.startsWith(t)).map(([, n]) => n);
+  if (starts.length === 1) return { n: starts[0] };
+  const did = starts.length ? starts.slice(0, 6) : closeNames(q, pokeNames.en).map(nm => idx.get(dexNorm(nm))).filter(Boolean);
+  return { n: 0, did, msg: did.length ? `No Pokémon called “${esc(q)}”. Did you mean` : `No Pokémon called “${esc(q)}”. Check the spelling, or type its Pokédex number.` };
+}
+function dexAct(n){
+  const nm = dexName(n), pos = dexPos(n), was = dexState(n), mode = viewOnly ? "find" : ui.dexMode;
+  const where = `<b>${dexNo(n)} ${esc(nm)}</b> → <b>${pos.text}</b>${pos.page ? ` <small>(sheet ${pos.sheet} ${pos.side})</small>` : ""}`;
+  let msg;
+  if (mode === "find") msg = `${where} · ${["empty", "bulk", "keeper"][was]}`;
+  else if (was >= +mode) msg = `${where} · already ${was === 2 ? "a keeper" : "has bulk"}${was === 1 && mode === "1" ? ` <button type="button" data-dex-up="${n}">Make it a keeper</button>` : ""}`;
+  else {
+    setDex(n, +mode);
+    msg = `✓ ${where} · marked ${mode === "2" ? "keeper" : "bulk"}`;
+    showUndo(`${nm} marked as ${mode === "2" ? "keeper" : "bulk"}`, () => { setDex(n, was); $("dexMsg").innerHTML = `Undone: ${esc(nm)} is ${["empty", "bulk", "keeper"][was]} again.`; });
+  }
+  $("dexMsg").innerHTML = msg;
+  dexGoTo(n, true);
+}
+function dexSubmit(){
+  const f = $("dexFind"), r = dexFind(f.value);
+  if (r.n){ dexAct(r.n); f.value = ""; return; }
+  $("dexMsg").innerHTML = (r.msg || "") + (r.did?.length ? " " + r.did.map(n => `<button type="button" data-dex-pick="${n}">${esc(dexName(n))}</button>`).join("") + "?" : "");
+}
+$("toolbar").addEventListener("submit", e => { if (e.target.id !== "dexFindForm") return; e.preventDefault(); dexSubmit(); });
+$("toolbar").addEventListener("change", e => {
+  if (e.target.id !== "dexJump") return;
+  const v = e.target.value; e.target.value = ""; if (!v) return;
+  if (v[0] === "p") dexGoPage(+v.slice(1)); else dexGoTo(+v, true);
+});
+$("toolbar").addEventListener("click", e => {
+  if (state.cat !== "dex") return;
+  const m = e.target.closest("[data-dex-mode]");
+  if (m){ ui.dexMode = m.dataset.dexMode; document.querySelectorAll("[data-dex-mode]").forEach(b => b.setAttribute("aria-pressed", b === m)); dexModeHint(); $("dexFind").focus(); return; }
+  const p = e.target.closest("[data-dex-pick]"); if (p){ $("dexFind").value = ""; dexAct(+p.dataset.dexPick); return; }
+  const u = e.target.closest("[data-dex-up]"); if (u){ const n = +u.dataset.dexUp; setDex(n, 2); $("dexMsg").innerHTML = `✓ <b>${dexNo(n)} ${esc(dexName(n))}</b> is now a keeper.`; dexGoTo(n, true); return; }
+  if (e.target.closest("#dexListBtn")) openDexList();
+});
+$("main").addEventListener("click", e => {
+  if (state.cat !== "dex") return;
+  const j = e.target.closest("[data-dex-jump]"); if (j){ dexGoTo(+j.dataset.dexJump, true); return; }
+  const more = e.target.closest("[data-dex-more]"); if (more){ openDexDlg(+more.dataset.dexMore); return; }
+  const t = e.target.closest("[data-dex]"); if (!t) return;
+  const n = +t.dataset.dex;
+  if (viewOnly){ openDexDlg(n); return; }
+  setDex(n, (dexState(n) + 1) % 3);
+});
+
+// Pocket details: status, a note, and which of your cards is the keeper (its picture then fills the pocket).
+let dexOpen = 0;
+function openDexDlg(n){ dexOpen = n; fillDexDlg(); $("dexDlg").showModal(); }
+function fillDexDlg(){
+  const n = dexOpen, e = state.dex[n] || {}, s = e.s || 0, nm = dexName(n), pos = dexPos(n), r = regionOf(n);
+  const note = $("dexNote");
+  if (note && document.activeElement === note) return; // don't redraw while typing a note
+  $("dexDlgBody").innerHTML = `
+    <div class="dex-dhead"><img src="${spriteUrl(n)}" alt="" onerror="this.remove()"><div><h3>${dexNo(n)} ${esc(nm)}</h3>
+      <p>${r[0]} · ${pos.text}${pos.page ? ` · sheet ${pos.sheet} ${pos.side}` : ""}</p>
+      ${DEX_HARD.has(n) ? `<p class="dex-dhard">◆ Legendary or Mythical: rarely in bulk, so you may need to buy a single card.</p>` : ""}</div></div>
+    ${viewOnly ? `<p><b>${["Empty", "Bulk (placeholder)", "Keeper"][s]}</b>${e.n ? ` · ${esc(e.n)}` : ""}</p>` : `
+    <div class="seg dex-dstate" role="group" aria-label="This pocket">${["Empty", "Bulk", "Keeper"].map((l, i) => `<button type="button" data-dex-set="${i}" aria-pressed="${s === i}">${l}</button>`).join("")}</div>
+    <label class="dex-dnote">Note <input id="dexNote" maxlength="120" placeholder="e.g. Paldean Fates, upgrade later" value="${esc(e.n || "")}"></label>`}
+    ${viewOnly ? "" : `<p class="hint"><b>Bulk</b> = a cheap card holding the spot for now. <b>Keeper</b> = the card you want to keep in this pocket.</p>`}
+    <div class="share-actions"><button class="btn" type="button" data-dex-close>Done</button></div>`;
+}
+$("dexDlg").addEventListener("click", e => {
+  const d = $("dexDlg"), n = dexOpen;
+  if (e.target === d || e.target.closest("[data-dex-close]")){ d.close(); return; }
+  const st = e.target.closest("[data-dex-set]"); if (st){ setDex(n, +st.dataset.dexSet); fillDexDlg(); return; }
+});
+$("dexDlg").addEventListener("input", e => {
+  if (e.target.id !== "dexNote") return;
+  const n = dexOpen, v = e.target.value.trim(), x = { ...(state.dex[n] || {}) };
+  if (v) x.n = v; else delete x.n;
+  if (!x.s && !x.n) delete state.dex[n]; else state.dex[n] = x;
+  save();
+});
+$("dexDlg").addEventListener("close", () => { if (state.cat === "dex") renderDex(); });
+
+// The shopping list: every empty pocket (or every bulk placeholder) grouped by region.
+let dexListKind = "missing";
+function openDexList(){ fillDexList(); $("dexListDlg").showModal(); }
+function dexListItems(kind){
+  return REGIONS.map(([name, a, b]) => { const ns = [];
+    for (let n = a; n <= b; n++){ const s = dexState(n); if (kind === "missing" ? !s : kind === "bulk" ? s === 1 : !s && DEX_HARD.has(n)) ns.push(n); }
+    return { name, ns }; }).filter(g => g.ns.length);
+}
+function fillDexList(){
+  const groups = dexListItems(dexListKind), total = groups.reduce((t, g) => t + g.ns.length, 0);
+  const kinds = [["missing", "Missing"], ["hard", "Missing · hard to find"], ...(viewOnly ? [] : [["bulk", "Bulk to upgrade"]])];
+  $("dexListBody").innerHTML = `<div class="seg" role="group" aria-label="Which list">${kinds.map(([v, l]) => `<button type="button" data-dex-list="${v}" aria-pressed="${dexListKind === v}">${l}</button>`).join("")}</div>
+    <p class="hint">${total ? `${total} Pokémon${dexListKind === "bulk" ? " with a bulk placeholder you could upgrade" : " still needed"}. Page numbers show where each one goes.` : dexListKind === "bulk" ? "No bulk placeholders right now." : "Nothing missing here. 🎉"}</p>
+    <div class="dex-listbody">${groups.map(g => `<h4>${g.name} <small>${g.ns.length}</small></h4><ul class="dex-list">${g.ns.map(n => { const p = dexPos(n);
+      return `<li><button type="button" data-dex-list-go="${n}"><span>${n}</span> ${esc(dexName(n))}${DEX_HARD.has(n) ? ` <i class="dex-hard">◆</i>` : ""} <small>${p.page ? "p." + p.page : "back"}</small></button></li>`; }).join("")}</ul>`).join("")}</div>
+    <div class="share-actions"><button class="btn" type="button" id="dexCopyList">Copy list</button><button class="btn light-dark" type="button" data-dex-close>Close</button></div>`;
+}
+$("dexListDlg").addEventListener("click", async e => {
+  const d = $("dexListDlg");
+  if (e.target === d || e.target.closest("[data-dex-close]")){ d.close(); return; }
+  const k = e.target.closest("[data-dex-list]"); if (k){ dexListKind = k.dataset.dexList; fillDexList(); return; }
+  const g = e.target.closest("[data-dex-list-go]"); if (g){ d.close(); dexGoTo(+g.dataset.dexListGo, true); return; }
+  const c = e.target.closest("#dexCopyList");
+  if (c){
+    const text = dexListItems(dexListKind).map(gr => `${gr.name}: ${gr.ns.map(n => `${n} ${dexName(n)}`).join(", ")}`).join("\n");
+    try { await navigator.clipboard.writeText(text); c.textContent = "Copied!"; } catch(err){ c.textContent = "Couldn’t copy"; }
+  }
+});
+// Homepage panel
+function dexHomeHtml(V){
+  if (!pokeNames) return "";
+  const st = dexStats(); if (V && !st.have) return "";
+  const pct = Math.round(st.have / DEX_N * 1000) / 10;
+  let next = 0; for (let n = 1; n <= DEX_N && !next; n++) if (!dexState(n)) next = n;
+  return `<section><div class="hsec"><h3>Pokédex binder</h3><p>One of every Pokémon, in Pokédex order</p></div>
+    <button class="msrow dex-home" data-go="dex"><span class="msrow-top"><b>${st.have.toLocaleString()} of 1,025 Pokémon</b><span>${pct}%</span></span>
+      <span class="bar"><span style="width:${pct}%"></span></span>
+      <small>${st.have ? `${st.keep} keeper${st.keep === 1 ? "" : "s"} · ${st.bulk} bulk` : V ? "" : "Start filling your 1,024-pocket binder: open it and tap a pocket"}${next ? ` · next empty: #${next} ${esc(dexName(next))} (${dexPos(next).page ? "page " + dexPos(next).page : "back cover"})` : " · complete!"}</small></button></section>`;
+}
 
 // ----- Cloud backup -----
 // The backup is kept in a secret gist in the owner's GitHub account, using a token (gist access only) they
@@ -2225,11 +2598,12 @@ function shareData(cat = state.cat){
     const i = k.indexOf(":"), lang = k.slice(0, i);
     if (langs.has(lang)) (owned[lang] ||= []).push(k.slice(i + 1));
   });
-  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), m: state.masterSets.map(x => [x.name, x.groups]), w: Object.entries(state.versions), o: owned, c: cat };
+  return { v: 1, d: new Date().toISOString().slice(0, 10), a: state.artists.map(a => [a.name, a.lang]), p: state.pokemon.map(p => [p.name, p.lang]), f: state.fullArts.map(e => [e.lang, e.id, e.vid || 0, e.tp || 0]), m: state.masterSets.map(x => [x.name, x.groups]), w: Object.entries(state.versions), o: owned, c: cat,
+    x: Object.entries(state.dex).filter(([, e]) => e.s).map(([n, e]) => [+n, e.s]) };
 }
 
 $("shareBtn").addEventListener("click", async () => {
-  if (!state.artists.length && !state.pokemon.length && !state.fullArts.length && !Object.keys(state.owned).length){ alert("Mark some cards as owned first, then share."); return; }
+  if (!state.artists.length && !state.pokemon.length && !state.fullArts.length && !Object.keys(state.owned).length && !Object.keys(state.dex).length){ alert("Mark some cards as owned first, then share."); return; }
   const b = $("shareBtn"); b.disabled = true;
   let url = null;
   try { url = await shortShareLink(); } catch(e){}
@@ -2273,7 +2647,8 @@ async function openShared(code, data){
             masterSets: (d.m || []).map(([name, groups]) => ({ name, groups, lang: "tcgp", kind: "ms" })),
             fullArts: (d.f || []).map(([lang, id, vid, tp]) => ({ lang, id, ...(vid ? { vid } : {}), ...(tp ? { tp } : {}) })),
             versions: Object.fromEntries(Array.isArray(d.w) ? d.w : []),
-            cat: d.c === "sir" ? "fa" : ["ex", "poke", "fa", "top", "ms", "home"].includes(d.c) ? d.c : "artists", exSub: "all" };
+            dex: Object.fromEntries((Array.isArray(d.x) ? d.x : []).map(([n, s]) => [n, { s }])),
+            cat: d.c === "sir" ? "fa" : ["ex", "poke", "fa", "top", "ms", "home", "dex"].includes(d.c) ? d.c : "artists", exSub: "all" };
   state.active = state.artists[0] ? akey(state.artists[0]) : null;
   state.activePoke = state.pokemon[0] ? pkey(state.pokemon[0]) : null;
   state.activeMs = state.masterSets[0] ? mkey(state.masterSets[0]) : null;
