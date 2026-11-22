@@ -349,8 +349,7 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 .dex-legend{display:flex;flex-wrap:wrap;gap:.3rem 1rem;align-items:center;margin:.8rem 0 0;color:var(--muted);font-size:.83rem}
 .dex-legend span{display:inline-flex;align-items:center;gap:.35rem}
 .dex-legend .lg{display:inline-block;width:.85rem;height:1.15rem;border-radius:3px;background:var(--page);outline:1.5px dashed var(--line);outline-offset:-1.5px}
-.dex-legend .lg.s1{outline:2px dashed var(--accent);outline-offset:-2px}
-.dex-legend .lg.s2{outline:2.5px solid var(--gold);outline-offset:-2.5px}
+.dex-legend .lg.s1{outline:2.5px solid var(--gold);outline-offset:-2.5px}
 .dex-howto{flex-basis:100%}
 .dex-hard{color:var(--rare);font-style:normal}
 .dex-spread{display:grid;grid-template-columns:1fr 1fr;gap:0 3rem;position:relative;margin-top:.6rem}
@@ -371,14 +370,12 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 .dex-tap{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;color:inherit}
 .dex-sleeve{display:block;position:relative;aspect-ratio:63/88;border-radius:7px;overflow:hidden;background:var(--page);outline:1.5px dashed var(--line);outline-offset:-1.5px}
 .dex-sleeve .sprite{position:absolute;inset:0;margin:auto;width:96%;max-width:120px;aspect-ratio:1;object-fit:contain;filter:grayscale(1);opacity:.32}
-.s1 .dex-sleeve{outline:2px dashed var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 9%,var(--page))}
-.s2 .dex-sleeve{outline:3px solid var(--gold);outline-offset:-3px;background:color-mix(in srgb,var(--gold) 12%,var(--page))}
-.s1 .sprite,.s2 .sprite{filter:none;opacity:1}
+.s1 .dex-sleeve{outline:3px solid var(--gold);outline-offset:-3px;background:color-mix(in srgb,var(--gold) 12%,var(--page))}
+.s1 .sprite{filter:none;opacity:1}
 .dex-no{position:absolute;top:.25rem;left:.3rem;font:700 .7rem/1 var(--display);color:var(--muted)}
 .dex-marks{position:absolute;top:.2rem;right:.25rem;display:flex;flex-direction:column;align-items:center;font-size:.72rem;line-height:1.1}
 .dex-noted{font-style:normal;color:var(--muted)}
-.dex-state{position:absolute;left:0;right:0;bottom:0;text-align:center;font:700 .66rem/1.6 var(--body);background:var(--accent);color:var(--page)}
-.s2 .dex-state{background:var(--gold);color:#1C2433}
+.dex-state{position:absolute;right:.25rem;bottom:.25rem;width:1.15rem;height:1.15rem;border-radius:50%;display:grid;place-items:center;font:800 .7rem/1 var(--body);background:var(--gold);color:#1C2433}
 .dex-more{display:block;width:100%;border:0;background:none;padding:.15rem 0 0;font-size:.75rem;line-height:1.25;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .dex-more:hover{text-decoration:underline}
 .dex-region{position:absolute;top:-.6rem;left:50%;transform:translateX(-50%);z-index:2;background:var(--cover);color:var(--gold);font:700 .6rem/1 var(--display);padding:.22rem .45rem;border-radius:99px;white-space:nowrap;letter-spacing:.05em;text-transform:uppercase}
@@ -2147,10 +2144,10 @@ $("main").addEventListener("click", e => {
 // ----- Pokédex binder -----
 // One pocket per Pokémon in National Pokédex order, laid out like the owner's 4×4 binder: 16 pockets a page,
 // 64 pages = 1,024 pockets, so #1025 Pecharunt goes in a sleeve inside the back cover. Page 1 is on the right
-// when the binder opens (front of sheet 1), then pages 2–3, 4–5… side by side. Each pocket is empty, bulk
-// (a placeholder card, to upgrade later) or a keeper (the card you want to keep there).
+// when the binder opens (front of sheet 1), then pages 2–3, 4–5… side by side. Each pocket is empty or filled
+// (whatever card of that Pokémon the owner has; they swap cards as they like, so there's no "upgrade" status).
 // It is tracked on its own: cards owned in other categories (kept in other physical binders) don't count here.
-// state.dex = { "25": { s: 1 bulk | 2 keeper, n: "note" } }
+// state.dex = { "25": { s: 1 (filled), n: "note" } }  (an early test version also used s: 2; it counts as filled)
 state.dex = state.dex && typeof state.dex === "object" && !Array.isArray(state.dex) ? state.dex : {};
 const DEX_N = 1025, DEX_POCKETS = 1024, DEX_PAGE = 16, DEX_PAGES = DEX_POCKETS / DEX_PAGE;
 const REGIONS = [["Kanto", 1, 151], ["Johto", 152, 251], ["Hoenn", 252, 386], ["Sinnoh", 387, 493], ["Unova", 494, 649],
@@ -2164,7 +2161,7 @@ const DEX_HARD = new Set([144, 145, 146, 150, 151, 243, 244, 245, 249, 250, 251,
 const dexName = n => pokeNames?.en?.[n - 1] || "#" + n;
 const dexNo = n => "#" + String(n).padStart(4, "0");
 const spriteUrl = n => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${n}.png`;
-const dexState = n => state.dex[n]?.s || 0;
+const dexState = n => state.dex[n]?.s ? 1 : 0;
 const regionOf = n => REGIONS.find(r => n >= r[1] && n <= r[2]);
 function dexPos(n){
   if (n > DEX_POCKETS) return { back: true, text: "Inside the back cover (extra sleeve or toploader)" };
@@ -2185,12 +2182,12 @@ function dexOfCard(name){
   return 0;
 }
 function dexPocket(n){
-  const e = state.dex[n], s = e?.s || 0, nm = dexName(n), r = regionOf(n), hard = DEX_HARD.has(n), pos = dexPos(n);
-  const label = ["Empty", "Bulk", "Keeper"][s];
+  const e = state.dex[n], s = dexState(n), nm = dexName(n), r = regionOf(n), hard = DEX_HARD.has(n), pos = dexPos(n);
+  const label = ["Empty", "Have it"][s];
   const tip = `${dexNo(n)} ${nm}: ${label.toLowerCase()}${hard ? " · hard to find in bulk" : ""}${e?.n ? " · note: " + e.n : ""}`;
   return `<li class="dexp s${s}" data-n="${n}" id="dex-${n}">${r[1] === n ? `<span class="dex-region">${r[0]}</span>` : ""}
-    <button class="dex-tap" data-dex="${n}" title="${esc(tip)}${viewOnly ? "" : ". Tap: empty → bulk → keeper"}" aria-label="${esc(tip)}">
-      <span class="dex-sleeve"><img class="sprite" loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"><span class="dex-no">${n}</span><span class="dex-marks">${hard ? `<i class="dex-hard">◆</i>` : ""}${e?.n ? `<i class="dex-noted">✎</i>` : ""}</span>${s ? `<span class="dex-state">${label}</span>` : ""}</span>
+    <button class="dex-tap" data-dex="${n}" title="${esc(tip)}${viewOnly ? "" : ". Tap to switch between empty and have it"}" aria-label="${esc(tip)}">
+      <span class="dex-sleeve"><img class="sprite" loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"><span class="dex-no">${n}</span><span class="dex-marks">${hard ? `<i class="dex-hard">◆</i>` : ""}${e?.n ? `<i class="dex-noted">✎</i>` : ""}</span>${s ? `<span class="dex-state">✓</span>` : ""}</span>
     </button>
     <button class="dex-more" data-dex-more="${n}" aria-label="Details for ${esc(nm)}${pos.page ? ", " + pos.text : ""}">${esc(nm)}</button></li>`;
 }
@@ -2213,9 +2210,9 @@ function dexBackCover(){
     <ol class="dex-grid">${h}</ol><p class="dex-backnote">Your binder has 1,024 pockets, so the last Pokémon, #1025 Pecharunt, goes in a toploader or spare sleeve tucked inside the back cover.</p></section>`;
 }
 function dexStats(){
-  let bulk = 0, keep = 0; const reg = REGIONS.map(() => 0);
-  for (let n = 1; n <= DEX_N; n++){ const s = dexState(n); if (!s) continue; if (s === 2) keep++; else bulk++; reg[REGIONS.indexOf(regionOf(n))]++; }
-  return { bulk, keep, have: bulk + keep, reg };
+  let have = 0; const reg = REGIONS.map(() => 0);
+  for (let n = 1; n <= DEX_N; n++) if (dexState(n)){ have++; reg[REGIONS.indexOf(regionOf(n))]++; }
+  return { have, reg };
 }
 function dexRegionsHtml(st){
   return REGIONS.map(([name, a, b], i) => { const all = b - a + 1, pct = Math.round(st.reg[i] / all * 100), p = dexPos(a);
@@ -2226,7 +2223,7 @@ function dexToolbar(st){
   const tb = $("toolbar"); tb.hidden = false;
   if (tb.dataset.dex !== "1"){
     tb.dataset.dex = "1";
-    const modes = viewOnly ? [] : [["find", "Find", "Find"], ["1", "Mark bulk", "Bulk"], ["2", "Mark keeper", "Keeper"]];
+    const modes = viewOnly ? [] : [["1", "Mark as have", "Mark"], ["find", "Just find", "Find"]];
     tb.innerHTML = `<div class="tb-head"><h2>Pokédex binder</h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
       <div class="filters dex-tools">
         <form class="dex-find" id="dexFindForm"><input id="dexFind" list="dexNames" enterkeyhint="go" autocomplete="off" aria-label="Find a Pokémon by name or number"><datalist id="dexNames"></datalist><button class="btn" type="submit">Go</button></form>
@@ -2240,13 +2237,13 @@ function dexToolbar(st){
     $("dexNames").innerHTML = (pokeNames?.en || []).map(n => `<option value="${esc(n)}">`).join("");
     dexModeHint();
   }
-  $("dexCount").innerHTML = `<strong>${st.have.toLocaleString()}</strong> of 1,025 filled <small>· ${st.keep} keeper${st.keep === 1 ? "" : "s"} · ${st.bulk} bulk</small>`;
+  $("dexCount").innerHTML = `<strong>${st.have.toLocaleString()}</strong> of 1,025 filled <small>· ${(DEX_N - st.have).toLocaleString()} to go</small>`;
   $("dexBar").style.width = (st.have / DEX_N * 100) + "%";
 }
-ui.dexMode = ui.dexMode || "1"; // sorting bulk is the usual job
+ui.dexMode = ui.dexMode || "1"; // going through a stack of cards is the usual job
 function dexModeHint(){
   const f = $("dexFind"); if (!f) return;
-  f.placeholder = viewOnly || ui.dexMode === "find" ? "Find a Pokémon or number…" : ui.dexMode === "2" ? "Keeper to file: name or #…" : "Sorting bulk? Type a name or #…";
+  f.placeholder = viewOnly || ui.dexMode === "find" ? "Find a Pokémon or number…" : "Sorting a stack? Type a name or #…";
 }
 function renderDex(){
   const m = $("main");
@@ -2259,9 +2256,9 @@ function renderDex(){
     for (let p = 2; p <= DEX_PAGES; p += 2) spreads += `<div class="dex-spread">${dexPageHtml(p)}${p + 1 <= DEX_PAGES ? dexPageHtml(p + 1) : dexBackCover()}</div>`;
     m.innerHTML = `<div class="dex">
       <section class="dex-regions" id="dexRegions"></section>
-      <p class="dex-legend"><span><i class="lg s0"></i>Empty</span><span><i class="lg s1"></i>Bulk: a cheap card holding the spot for now</span><span><i class="lg s2"></i>Keeper: the card you want to keep there</span>
-        <span><b class="dex-hard">◆</b> Hard to find in bulk</span><span>✎ Has a note</span>
-        <span class="dex-howto">${viewOnly ? "Tap a name for details." : "Tap a pocket to change it: empty → bulk → keeper. Tap a name to add a note."}</span></p>
+      <p class="dex-legend"><span><i class="lg s0"></i>Empty</span><span><i class="lg s1"></i>Have it</span>
+        <span><b class="dex-hard">◆</b> Legendary or Mythical: hard to find in bulk</span><span>✎ Has a note</span>
+        <span class="dex-howto">${viewOnly ? "Tap a name for details." : "Tap a pocket to mark it (tap again to clear). Tap a name to add a note."}</span></p>
       <div class="dex-binder" id="dexBinder">${spreads}</div></div>`;
   } else {
     for (let n = 1; n <= DEX_N; n++){ const h = dexPocket(n); if (h !== dexLast.pockets[n]){ dexLast.pockets[n] = h; const el = $("dex-" + n); if (el) el.outerHTML = h; } }
@@ -2305,12 +2302,12 @@ function dexAct(n){
   const nm = dexName(n), pos = dexPos(n), was = dexState(n), mode = viewOnly ? "find" : ui.dexMode;
   const where = `<b>${dexNo(n)} ${esc(nm)}</b> → <b>${pos.text}</b>${pos.page ? ` <small>(sheet ${pos.sheet} ${pos.side})</small>` : ""}`;
   let msg;
-  if (mode === "find") msg = `${where} · ${["empty", "bulk", "keeper"][was]}`;
-  else if (was >= +mode) msg = `${where} · already ${was === 2 ? "a keeper" : "has bulk"}${was === 1 && mode === "1" ? ` <button type="button" data-dex-up="${n}">Make it a keeper</button>` : ""}`;
+  if (mode === "find") msg = `${where} · ${was ? "you have it" : "empty"}`;
+  else if (was) msg = `${where} · already have it`;
   else {
-    setDex(n, +mode);
-    msg = `✓ ${where} · marked ${mode === "2" ? "keeper" : "bulk"}`;
-    showUndo(`${nm} marked as ${mode === "2" ? "keeper" : "bulk"}`, () => { setDex(n, was); $("dexMsg").innerHTML = `Undone: ${esc(nm)} is ${["empty", "bulk", "keeper"][was]} again.`; });
+    setDex(n, 1);
+    msg = `✓ ${where} · marked`;
+    showUndo(`${nm} marked`, () => { setDex(n, 0); $("dexMsg").innerHTML = `Undone: ${esc(nm)} is empty again.`; });
   }
   $("dexMsg").innerHTML = msg;
   dexGoTo(n, true);
@@ -2331,7 +2328,6 @@ $("toolbar").addEventListener("click", e => {
   const m = e.target.closest("[data-dex-mode]");
   if (m){ ui.dexMode = m.dataset.dexMode; document.querySelectorAll("[data-dex-mode]").forEach(b => b.setAttribute("aria-pressed", b === m)); dexModeHint(); $("dexFind").focus(); return; }
   const p = e.target.closest("[data-dex-pick]"); if (p){ $("dexFind").value = ""; dexAct(+p.dataset.dexPick); return; }
-  const u = e.target.closest("[data-dex-up]"); if (u){ const n = +u.dataset.dexUp; setDex(n, 2); $("dexMsg").innerHTML = `✓ <b>${dexNo(n)} ${esc(dexName(n))}</b> is now a keeper.`; dexGoTo(n, true); return; }
   if (e.target.closest("#dexListBtn")) openDexList();
 });
 $("main").addEventListener("click", e => {
@@ -2341,24 +2337,23 @@ $("main").addEventListener("click", e => {
   const t = e.target.closest("[data-dex]"); if (!t) return;
   const n = +t.dataset.dex;
   if (viewOnly){ openDexDlg(n); return; }
-  setDex(n, (dexState(n) + 1) % 3);
+  setDex(n, dexState(n) ? 0 : 1);
 });
 
-// Pocket details: status, a note, and which of your cards is the keeper (its picture then fills the pocket).
+// Pocket details: empty / have it, and a note.
 let dexOpen = 0;
 function openDexDlg(n){ dexOpen = n; fillDexDlg(); $("dexDlg").showModal(); }
 function fillDexDlg(){
-  const n = dexOpen, e = state.dex[n] || {}, s = e.s || 0, nm = dexName(n), pos = dexPos(n), r = regionOf(n);
+  const n = dexOpen, e = state.dex[n] || {}, s = dexState(n), nm = dexName(n), pos = dexPos(n), r = regionOf(n);
   const note = $("dexNote");
   if (note && document.activeElement === note) return; // don't redraw while typing a note
   $("dexDlgBody").innerHTML = `
     <div class="dex-dhead"><img src="${spriteUrl(n)}" alt="" onerror="this.remove()"><div><h3>${dexNo(n)} ${esc(nm)}</h3>
       <p>${r[0]} · ${pos.text}${pos.page ? ` · sheet ${pos.sheet} ${pos.side}` : ""}</p>
       ${DEX_HARD.has(n) ? `<p class="dex-dhard">◆ Legendary or Mythical: rarely in bulk, so you may need to buy a single card.</p>` : ""}</div></div>
-    ${viewOnly ? `<p><b>${["Empty", "Bulk (placeholder)", "Keeper"][s]}</b>${e.n ? ` · ${esc(e.n)}` : ""}</p>` : `
-    <div class="seg dex-dstate" role="group" aria-label="This pocket">${["Empty", "Bulk", "Keeper"].map((l, i) => `<button type="button" data-dex-set="${i}" aria-pressed="${s === i}">${l}</button>`).join("")}</div>
+    ${viewOnly ? `<p><b>${s ? "Have it" : "Empty"}</b>${e.n ? ` · ${esc(e.n)}` : ""}</p>` : `
+    <div class="seg dex-dstate" role="group" aria-label="This pocket">${["Empty", "Have it"].map((l, i) => `<button type="button" data-dex-set="${i}" aria-pressed="${s === i}">${l}</button>`).join("")}</div>
     <label class="dex-dnote">Note <input id="dexNote" maxlength="120" placeholder="e.g. Paldean Fates, upgrade later" value="${esc(e.n || "")}"></label>`}
-    ${viewOnly ? "" : `<p class="hint"><b>Bulk</b> = a cheap card holding the spot for now. <b>Keeper</b> = the card you want to keep in this pocket.</p>`}
     <div class="share-actions"><button class="btn" type="button" data-dex-close>Done</button></div>`;
 }
 $("dexDlg").addEventListener("click", e => {
@@ -2375,19 +2370,19 @@ $("dexDlg").addEventListener("input", e => {
 });
 $("dexDlg").addEventListener("close", () => { if (state.cat === "dex") renderDex(); });
 
-// The shopping list: every empty pocket (or every bulk placeholder) grouped by region.
+// The shopping list: every empty pocket grouped by region (or only the hard-to-find ones).
 let dexListKind = "missing";
 function openDexList(){ fillDexList(); $("dexListDlg").showModal(); }
 function dexListItems(kind){
   return REGIONS.map(([name, a, b]) => { const ns = [];
-    for (let n = a; n <= b; n++){ const s = dexState(n); if (kind === "missing" ? !s : kind === "bulk" ? s === 1 : !s && DEX_HARD.has(n)) ns.push(n); }
+    for (let n = a; n <= b; n++){ const s = dexState(n); if (!s && (kind === "missing" || DEX_HARD.has(n))) ns.push(n); }
     return { name, ns }; }).filter(g => g.ns.length);
 }
 function fillDexList(){
   const groups = dexListItems(dexListKind), total = groups.reduce((t, g) => t + g.ns.length, 0);
-  const kinds = [["missing", "Missing"], ["hard", "Missing · hard to find"], ...(viewOnly ? [] : [["bulk", "Bulk to upgrade"]])];
+  const kinds = [["missing", "Missing"], ["hard", "Missing · hard to find"]];
   $("dexListBody").innerHTML = `<div class="seg" role="group" aria-label="Which list">${kinds.map(([v, l]) => `<button type="button" data-dex-list="${v}" aria-pressed="${dexListKind === v}">${l}</button>`).join("")}</div>
-    <p class="hint">${total ? `${total} Pokémon${dexListKind === "bulk" ? " with a bulk placeholder you could upgrade" : " still needed"}. Page numbers show where each one goes.` : dexListKind === "bulk" ? "No bulk placeholders right now." : "Nothing missing here. 🎉"}</p>
+    <p class="hint">${total ? `${total} Pokémon still needed. Page numbers show where each one goes.` : "Nothing missing here. 🎉"}</p>
     <div class="dex-listbody">${groups.map(g => `<h4>${g.name} <small>${g.ns.length}</small></h4><ul class="dex-list">${g.ns.map(n => { const p = dexPos(n);
       return `<li><button type="button" data-dex-list-go="${n}"><span>${n}</span> ${esc(dexName(n))}${DEX_HARD.has(n) ? ` <i class="dex-hard">◆</i>` : ""} <small>${p.page ? "p." + p.page : "back"}</small></button></li>`; }).join("")}</ul>`).join("")}</div>
     <div class="share-actions"><button class="btn" type="button" id="dexCopyList">Copy list</button><button class="btn light-dark" type="button" data-dex-close>Close</button></div>`;
@@ -2412,7 +2407,7 @@ function dexHomeHtml(V){
   return `<section><div class="hsec"><h3>Pokédex binder</h3><p>One of every Pokémon, in Pokédex order</p></div>
     <button class="msrow dex-home" data-go="dex"><span class="msrow-top"><b>${st.have.toLocaleString()} of 1,025 Pokémon</b><span>${pct}%</span></span>
       <span class="bar"><span style="width:${pct}%"></span></span>
-      <small>${st.have ? `${st.keep} keeper${st.keep === 1 ? "" : "s"} · ${st.bulk} bulk` : V ? "" : "Start filling your 1,024-pocket binder: open it and tap a pocket"}${next ? ` · next empty: #${next} ${esc(dexName(next))} (${dexPos(next).page ? "page " + dexPos(next).page : "back cover"})` : " · complete!"}</small></button></section>`;
+      <small>${st.have ? `${(DEX_N - st.have).toLocaleString()} to go` : V ? "" : "Start filling your 1,024-pocket binder: open it and tap a pocket"}${next ? ` · next empty: #${next} ${esc(dexName(next))} (${dexPos(next).page ? "page " + dexPos(next).page : "back cover"})` : " · complete!"}</small></button></section>`;
 }
 
 // ----- Cloud backup -----
