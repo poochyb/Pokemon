@@ -376,6 +376,17 @@ dialog::backdrop{background:rgba(10,14,22,.8)}
 .dex-no{position:absolute;top:.25rem;left:.3rem;font:700 .7rem/1 var(--display);color:var(--muted)}
 .dex-marks{position:absolute;top:.2rem;right:.25rem;display:flex;flex-direction:column;align-items:center;font-size:.72rem;line-height:1.1}
 .dex-noted{font-style:normal;color:var(--muted)}
+.dex-types{position:absolute;left:.25rem;bottom:.25rem;display:flex;gap:2px}
+.dt{display:inline-grid;place-items:center;width:1.25rem;height:1.25rem;border-radius:50%;font-style:normal;font-size:.72rem;line-height:1;
+  background:var(--tc);box-shadow:0 0 0 1.5px var(--page);vertical-align:middle}
+.t-G{--tc:#7DBE5A}.t-R{--tc:#F08A5D}.t-W{--tc:#6CB4EE}.t-L{--tc:#F6D449}.t-P{--tc:#C59BE6}.t-F{--tc:#D9A066}
+.t-D{--tc:#5A6B7A}.t-M{--tc:#B8C1CC}.t-N{--tc:#D8B44A}.t-Y{--tc:#F3A6C8}.t-C{--tc:#E8E3D6}
+.dex-ttext{white-space:nowrap;font-weight:400}
+.dex-ttext .dt{width:1.15rem;height:1.15rem}
+.dex-typekey{flex-basis:100%;display:flex !important;flex-wrap:wrap;gap:.25rem .8rem}
+.dex-typekey > span{display:inline-flex;align-items:center;gap:.25rem}
+.dex-listby{display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:var(--muted);font-size:.9rem}
+.dex-list small{white-space:nowrap}
 .dex-state{position:absolute;right:.25rem;bottom:.25rem;width:1.15rem;height:1.15rem;border-radius:50%;display:grid;place-items:center;font:800 .7rem/1 var(--body);background:var(--gold);color:#1C2433}
 .dex-more{display:block;width:100%;border:0;background:none;padding:.15rem 0 0;font-size:.75rem;line-height:1.25;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .dex-more:hover{text-decoration:underline}
@@ -2181,13 +2192,25 @@ function dexOfCard(name){
   for (let len = 3; len >= 1; len--) for (let i = 0; i + len <= w.length; i++){ const n = idx.get(w.slice(i, i + len).join(" ")); if (n) return n; }
   return 0;
 }
+// Card (energy) type each Pokémon is usually printed as, to know which box of type-sorted bulk to look in.
+// From the Pokémon TCG data project (github.com/PokemonTCG/pokemon-tcg-data): the most common type on its cards
+// since 2019 (all years if it has fewer than 2 recent cards), plus a second type when at least a quarter of its
+// cards use it (Mr. Mime: Psychic, or Water for Galarian Mr. Mime). One entry per Dex number, in order.
+const DEX_TYPE_CODES = "G,G,G,R,R,R,W,W,W,G,G,G,G,G,G,C,C,C,C,C,C,C,DP,DP,L,L,F,F,D,D,DP,DP,DP,D,P,P,RW,R,YP,CP,D,D,G,G,G,G,G,G,G,F,FM,CM,C,W,W,F,F,RF,RF,W,W,WF,P,P,P,F,F,F,G,G,G,WP,WP,FL,FL,FL,RP,RP,WP,WP,L,L,CF,C,C,W,W,D,DP,W,W,PD,PD,DP,F,P,P,W,W,L,L,GP,GN,F,FP,F,F,C,DP,DP,F,F,C,G,C,W,W,W,W,W,W,PW,G,PW,L,R,G,C,W,W,W,C,C,W,L,R,C,WF,WF,F,F,F,C,WP,LF,RD,N,N,N,P,P,G,G,G,R,R,PR,W,W,W,C,C,C,C,G,G,DG,DG,D,L,L,L,P,C,P,P,P,P,L,L,L,G,PW,WP,F,W,G,G,G,C,G,G,G,D,FW,P,D,D,DP,P,P,P,P,G,MG,C,F,M,P,P,DW,M,G,G,DW,C,C,R,R,WF,WF,P,W,W,WC,W,M,DR,DR,W,F,F,C,C,C,F,F,P,L,R,C,C,L,R,W,F,F,D,C,R,G,G,G,G,R,R,R,W,W,W,D,D,DC,DC,G,G,G,G,G,GW,GW,GW,G,G,G,C,C,WC,CW,P,P,P,G,G,G,G,C,C,C,G,G,P,C,C,C,F,F,CY,F,C,C,D,MP,M,M,M,F,F,L,L,L,L,G,G,G,D,PG,DW,DW,W,W,R,R,R,P,P,C,F,F,F,G,G,C,NC,C,D,PF,F,FW,FW,W,WD,FP,FP,G,G,F,F,W,W,RC,C,P,P,P,P,G,P,D,P,W,W,W,W,W,W,W,W,FW,W,N,N,NC,M,M,M,F,W,M,NP,PN,W,F,NC,MP,P,G,G,G,R,R,R,W,W,WM,C,C,C,C,C,G,G,L,L,L,G,G,F,F,M,M,G,GF,G,G,GP,L,W,W,G,G,W,F,C,P,P,C,C,P,D,C,C,P,D,D,M,M,F,P,C,C,D,FN,FN,FN,C,F,F,F,F,DP,D,DF,DF,G,W,W,W,WG,WG,WD,LM,C,F,G,L,R,PC,G,G,W,F,WF,C,FP,FM,P,W,L,P,P,P,M,W,R,C,N,P,W,W,D,G,C,R,G,G,G,R,R,R,W,W,D,C,C,C,C,C,D,D,G,G,R,R,W,W,P,P,C,C,C,L,L,F,F,F,P,P,F,FM,C,F,F,F,W,WF,WF,F,F,G,G,G,D,D,D,GY,GP,G,G,W,D,D,D,RW,RW,G,GF,GF,D,D,P,PF,P,W,W,FC,FC,D,D,D,DC,C,C,P,P,P,P,P,P,WC,WC,W,W,W,G,G,L,G,M,G,G,WP,PW,W,L,L,M,M,M,M,M,L,L,L,P,P,R,R,RP,N,N,N,W,W,W,G,G,LM,F,F,N,PF,P,MD,MD,C,C,C,D,D,R,GM,D,D,D,R,R,M,F,G,C,L,R,L,F,W,W,P,MG,G,G,G,R,R,R,W,W,W,C,CF,C,RC,RC,G,G,G,R,R,PY,P,PY,G,G,F,D,C,P,P,MP,M,M,PY,PY,P,P,DP,DP,F,F,DP,N,W,W,L,L,F,FN,W,W,P,FC,PL,FP,N,N,N,MP,GP,GP,P,P,W,W,NC,N,P,D,F,P,D,R,G,G,GF,R,R,RD,W,W,W,C,C,C,C,C,G,L,L,F,WF,RP,P,P,F,F,W,PW,PW,F,F,WG,WG,G,G,GP,GP,R,R,C,CF,G,G,G,P,C,F,WG,WG,PF,PF,W,C,C,FC,C,RN,ML,P,W,CN,GP,N,N,N,L,P,G,W,P,P,M,P,P,FG,G,L,CM,MG,D,PN,M,PF,P,NP,FM,RP,L,M,M,G,G,G,R,R,R,W,W,W,C,C,C,C,M,G,GP,G,D,D,G,G,C,C,W,W,L,L,F,F,F,GN,GN,GN,F,F,CW,W,W,L,L,R,R,F,F,P,P,P,P,P,D,D,D,D,M,P,F,W,F,P,P,F,L,W,W,F,WR,P,LD,M,M,L,L,WN,W,MN,PN,PN,PN,M,M,D,F,F,G,L,N,W,P,WP,PC,F,CF,W,D,D,P,G,G,G,R,R,R,W,W,W,C,C,G,G,G,GD,L,L,L,C,C,P,P,G,G,G,C,F,F,F,R,R,RP,L,L,L,L,D,D,D,D,G,GP,GF,GF,F,G,GR,G,PG,P,PG,P,P,P,W,WL,DC,W,W,M,M,CN,M,F,F,P,P,C,W,W,W,W,NW,F,D,CD,C,DM,F,P,D,P,F,F,M,W,L,C,R,L,W,W,W,P,M,G,W,F,R,D,P,F,L,W,G,G,G,G,DF,PD,DP,G,M,G,R,N,F,P,C,D".split(",");
+const TCG_TYPES = { G: ["Grass", "🌿"], R: ["Fire", "🔥"], W: ["Water", "💧"], L: ["Lightning", "⚡"], P: ["Psychic", "🔮"], F: ["Fighting", "👊"],
+  D: ["Darkness", "🌙"], M: ["Metal", "⚙️"], N: ["Dragon", "🐉"], Y: ["Fairy", "✨"], C: ["Colorless", "⭐"] };
+const TYPE_ORDER = "GRWLPFDMNYC";
+const dexTypes = n => [...(DEX_TYPE_CODES[n - 1] || "")];
+const typeIcon = c => `<i class="dt t-${c}" title="${TCG_TYPES[c][0]}" aria-hidden="true">${TCG_TYPES[c][1]}</i>`;
+const dexTypeText = n => dexTypes(n).map(c => TCG_TYPES[c][0]).join(" or ");
+const dexTypeIcons = n => dexTypes(n).map(typeIcon).join("");
 function dexPocket(n){
   const e = state.dex[n], s = dexState(n), nm = dexName(n), r = regionOf(n), hard = DEX_HARD.has(n), pos = dexPos(n);
   const label = ["Empty", "Have it"][s];
-  const tip = `${dexNo(n)} ${nm}: ${label.toLowerCase()}${hard ? " · hard to find in bulk" : ""}${e?.n ? " · note: " + e.n : ""}`;
+  const tip = `${dexNo(n)} ${nm} (${dexTypeText(n)}): ${label.toLowerCase()}${hard ? " · hard to find in bulk" : ""}${e?.n ? " · note: " + e.n : ""}`;
   return `<li class="dexp s${s}" data-n="${n}" id="dex-${n}">${r[1] === n ? `<span class="dex-region">${r[0]}</span>` : ""}
     <button class="dex-tap" data-dex="${n}" title="${esc(tip)}${viewOnly ? "" : ". Tap to switch between empty and have it"}" aria-label="${esc(tip)}">
-      <span class="dex-sleeve"><img class="sprite" loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"><span class="dex-no">${n}</span><span class="dex-marks">${hard ? `<i class="dex-hard">◆</i>` : ""}${e?.n ? `<i class="dex-noted">✎</i>` : ""}</span>${s ? `<span class="dex-state">✓</span>` : ""}</span>
+      <span class="dex-sleeve"><img class="sprite" loading="lazy" src="${spriteUrl(n)}" alt="" onerror="this.remove()"><span class="dex-no">${n}</span><span class="dex-types">${dexTypeIcons(n)}</span><span class="dex-marks">${hard ? `<i class="dex-hard">◆</i>` : ""}${e?.n ? `<i class="dex-noted">✎</i>` : ""}</span>${s ? `<span class="dex-state">✓</span>` : ""}</span>
     </button>
     <button class="dex-more" data-dex-more="${n}" aria-label="Details for ${esc(nm)}${pos.page ? ", " + pos.text : ""}">${esc(nm)}</button></li>`;
 }
@@ -2250,7 +2273,7 @@ function renderDex(){
     m.innerHTML = `<div class="dex">
       <section class="dex-regions" id="dexRegions"></section>
       <p class="dex-legend"><span><i class="lg s0"></i>Empty</span><span><i class="lg s1"></i>Have it</span>
-        <span><b class="dex-hard">◆</b> Legendary or Mythical: hard to find in bulk</span><span>✎ Has a note</span>
+        <span><b class="dex-hard">◆</b> Legendary or Mythical: hard to find in bulk</span><span>✎ Has a note</span><span class="dex-typekey">Card type: ${[...TYPE_ORDER].filter(c => c !== "Y").map(c => `<span>${typeIcon(c)} ${TCG_TYPES[c][0]}</span>`).join("")}</span>
         <span class="dex-howto">${viewOnly ? "Tap a name for details." : "Tap a pocket to mark it (tap again to clear). Tap a name to add a note."}</span></p>
       <div class="dex-binder" id="dexBinder">${spreads}</div></div>`;
   } else {
@@ -2292,7 +2315,7 @@ function dexFind(q){
   return { n: 0, did, msg: did.length ? `No Pokémon called “${esc(q)}”. Did you mean` : `No Pokémon called “${esc(q)}”. Check the spelling, or type its Pokédex number.` };
 }
 // Go only finds: it shows the pocket and where it goes, with a button to mark it (or tap the pocket itself).
-function dexWhere(n){ const pos = dexPos(n); return `<b>${dexNo(n)} ${esc(dexName(n))}</b> → <b>${pos.text}</b>${pos.page ? ` <small>(sheet ${pos.sheet} ${pos.side})</small>` : ""}`; }
+function dexWhere(n){ const pos = dexPos(n); return `<b>${dexNo(n)} ${esc(dexName(n))}</b> <span class="dex-ttext">${dexTypeIcons(n)} ${dexTypeText(n)}</span> → <b>${pos.text}</b>${pos.page ? ` <small>(sheet ${pos.sheet} ${pos.side})</small>` : ""}`; }
 function dexAct(n){
   $("dexMsg").innerHTML = `${dexWhere(n)} · ${dexState(n) ? "✓ you have it" : viewOnly ? "empty" : `empty <button type="button" class="dex-markbtn" data-dex-mark="${n}">✓ Mark it</button>`}`;
   dexGoTo(n, true);
@@ -2334,6 +2357,7 @@ function fillDexDlg(){
   if (note && document.activeElement === note) return; // don't redraw while typing a note
   $("dexDlgBody").innerHTML = `
     <div class="dex-dhead"><img src="${spriteUrl(n)}" alt="" onerror="this.remove()"><div><h3>${dexNo(n)} ${esc(nm)}</h3>
+      <p class="dex-ttext">${dexTypeIcons(n)} Usually a <b>${dexTypeText(n)}</b> card</p>
       <p>${r[0]} · ${pos.text}${pos.page ? ` · sheet ${pos.sheet} ${pos.side}` : ""}</p>
       ${DEX_HARD.has(n) ? `<p class="dex-dhard">◆ Legendary or Mythical: rarely in bulk, so you may need to buy a single card.</p>` : ""}</div></div>
     ${viewOnly ? `<p><b>${s ? "Have it" : "Empty"}</b>${e.n ? ` · ${esc(e.n)}` : ""}</p>` : `
@@ -2356,30 +2380,37 @@ $("dexDlg").addEventListener("input", e => {
 $("dexDlg").addEventListener("close", () => { if (state.cat === "dex") renderDex(); });
 
 // The shopping list: every empty pocket grouped by region (or only the hard-to-find ones).
-let dexListKind = "missing";
+let dexListKind = "missing", dexListBy = "region";
 function openDexList(){ fillDexList(); $("dexListDlg").showModal(); }
-function dexListItems(kind){
+// Grouped by region, or by card type (each Pokémon under its main type) to match type-sorted bulk boxes.
+function dexListItems(kind, by = dexListBy){
+  const want = n => !dexState(n) && (kind === "missing" || DEX_HARD.has(n));
+  if (by === "type") return [...TYPE_ORDER].map(c => { const ns = [];
+    for (let n = 1; n <= DEX_N; n++) if (dexTypes(n)[0] === c && want(n)) ns.push(n);
+    return { name: TCG_TYPES[c][0], icon: typeIcon(c), ns }; }).filter(g => g.ns.length);
   return REGIONS.map(([name, a, b]) => { const ns = [];
-    for (let n = a; n <= b; n++){ const s = dexState(n); if (!s && (kind === "missing" || DEX_HARD.has(n))) ns.push(n); }
+    for (let n = a; n <= b; n++) if (want(n)) ns.push(n);
     return { name, ns }; }).filter(g => g.ns.length);
 }
 function fillDexList(){
   const groups = dexListItems(dexListKind), total = groups.reduce((t, g) => t + g.ns.length, 0);
   const kinds = [["missing", "Missing"], ["hard", "Missing · hard to find"]];
   $("dexListBody").innerHTML = `<div class="seg" role="group" aria-label="Which list">${kinds.map(([v, l]) => `<button type="button" data-dex-list="${v}" aria-pressed="${dexListKind === v}">${l}</button>`).join("")}</div>
+    <div class="dex-listby"><span>Group by</span><div class="seg" role="group" aria-label="Group by">${[["region", "Region"], ["type", "Card type"]].map(([v, l]) => `<button type="button" data-dex-by="${v}" aria-pressed="${dexListBy === v}">${l}</button>`).join("")}</div></div>
     <p class="hint">${total ? `${total} Pokémon still needed. Page numbers show where each one goes.` : "Nothing missing here. 🎉"}</p>
-    <div class="dex-listbody">${groups.map(g => `<h4>${g.name} <small>${g.ns.length}</small></h4><ul class="dex-list">${g.ns.map(n => { const p = dexPos(n);
-      return `<li><button type="button" data-dex-list-go="${n}"><span>${n}</span> ${esc(dexName(n))}${DEX_HARD.has(n) ? ` <i class="dex-hard">◆</i>` : ""} <small>${p.page ? "p." + p.page : "back"}</small></button></li>`; }).join("")}</ul>`).join("")}</div>
+    <div class="dex-listbody">${groups.map(g => `<h4>${g.icon || ""} ${g.name} <small>${g.ns.length}</small></h4><ul class="dex-list">${g.ns.map(n => { const p = dexPos(n);
+      return `<li><button type="button" data-dex-list-go="${n}"><span>${n}</span> ${dexListBy === "type" ? "" : dexTypeIcons(n) + " "}${esc(dexName(n))}${dexListBy === "type" && dexTypes(n)[1] ? ` <small title="also ${TCG_TYPES[dexTypes(n)[1]][0]}">(or ${TCG_TYPES[dexTypes(n)[1]][1]})</small>` : ""}${DEX_HARD.has(n) ? ` <i class="dex-hard">◆</i>` : ""} <small>${p.page ? "p." + p.page : "back"}</small></button></li>`; }).join("")}</ul>`).join("")}</div>
     <div class="share-actions"><button class="btn" type="button" id="dexCopyList">Copy list</button><button class="btn light-dark" type="button" data-dex-close>Close</button></div>`;
 }
 $("dexListDlg").addEventListener("click", async e => {
   const d = $("dexListDlg");
   if (e.target === d || e.target.closest("[data-dex-close]")){ d.close(); return; }
   const k = e.target.closest("[data-dex-list]"); if (k){ dexListKind = k.dataset.dexList; fillDexList(); return; }
+  const by = e.target.closest("[data-dex-by]"); if (by){ dexListBy = by.dataset.dexBy; fillDexList(); return; }
   const g = e.target.closest("[data-dex-list-go]"); if (g){ d.close(); dexGoTo(+g.dataset.dexListGo, true); return; }
   const c = e.target.closest("#dexCopyList");
   if (c){
-    const text = dexListItems(dexListKind).map(gr => `${gr.name}: ${gr.ns.map(n => `${n} ${dexName(n)}`).join(", ")}`).join("\n");
+    const text = dexListItems(dexListKind).map(gr => `${gr.name}: ${gr.ns.map(n => `${n} ${dexName(n)}${dexListBy === "type" && dexTypes(n)[1] ? ` (or ${TCG_TYPES[dexTypes(n)[1]][0]})` : ""}`).join(", ")}`).join("\n");
     try { await navigator.clipboard.writeText(text); c.textContent = "Copied!"; } catch(err){ c.textContent = "Couldn’t copy"; }
   }
 });
