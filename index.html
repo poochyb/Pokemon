@@ -2315,7 +2315,8 @@ function dexToolbar(st){
     $("dexNames").innerHTML = (pokeNames?.en || []).map(n => `<option value="${esc(n)}">`).join("");
     $("dexFind").placeholder = "Find a Pokémon: name or #…";
   }
-  $("dexCount").innerHTML = `<strong>${st.have.toLocaleString()}</strong> of 1,025 filled <small>· ${(DEX_N - st.have).toLocaleString()} to go</small>`;
+  const pct = st.have / DEX_N * 100, pctText = pct > 0 && pct < 10 ? pct.toFixed(1) : Math.round(pct); // 0.4% early on, then whole numbers like the other tabs
+  $("dexCount").innerHTML = `<strong>${st.have.toLocaleString()}</strong> of 1,025 filled (${pctText}%) <small>· ${(DEX_N - st.have).toLocaleString()} to go</small>`;
   $("dexBar").style.width = (st.have / DEX_N * 100) + "%";
 }
 function renderDex(){
