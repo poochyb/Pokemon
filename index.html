@@ -86,6 +86,9 @@ body.no-tabs header{padding-bottom:.5rem}
 
 .toolbar{background:var(--page);color:var(--ink);padding:.45rem var(--gutter);border-bottom:1px solid var(--line);border-top:3px solid var(--gold);
   display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.25rem}
+.tb-title{border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit;text-align:left;cursor:pointer;padding:.1rem .4rem;margin:-.1rem -.4rem;border-radius:8px;transition:background .15s,color .15s}
+.tb-title:hover{background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.tb-title:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .tb-head{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .9rem;flex:1 1 24rem;min-width:0}
 h2{font:800 1.2rem/1.1 var(--display);margin:0;letter-spacing:-.02em}
 .count{font-family:var(--display);color:var(--muted);white-space:nowrap}
@@ -1425,7 +1428,7 @@ function render(){
   const sets = cards ? [...new Map(cards.map(c => [c.setId, c])).values()].sort((x,y) => x.order - y.order) : [];
   tb.hidden = false;
   tb.innerHTML = `
-    <div class="tb-head"><h2>${esc(FIXED_TITLE[a.kind] || a.name)}</h2><div class="count" id="count"></div><div class="bar" ${top ? "hidden" : ""}><span id="bar"></span></div><div class="count" id="value"></div></div>
+    <div class="tb-head"><h2><button class="tb-title" type="button" data-to-top title="Back to top">${esc(FIXED_TITLE[a.kind] || a.name)}</button></h2><div class="count" id="count"></div><div class="bar" ${top ? "hidden" : ""}><span id="bar"></span></div><div class="count" id="value"></div></div>
     <div class="filters">
       <div class="seg" role="group" aria-label="Show" ${top ? "hidden" : ""}>
         ${["all","owned","missing"].map(v => `<button data-view="${v}" aria-pressed="${ui.view===v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join("")}
@@ -2200,6 +2203,7 @@ function goTo(cat, key){
   ui.set = ""; ui.q = ""; save(); render(); window.scrollTo(0, 0);
   updateAddBox(); loadArtist(activeList());
 }
+document.addEventListener("click", e => { if (e.target.closest("[data-to-top]")) window.scrollTo({ top: 0, behavior: scrollY > innerHeight * 3 ? "instant" : "smooth" }); });
 $("homeBtn").addEventListener("click", () => { if (state.cat !== "home") goTo("home"); else window.scrollTo({ top: 0, behavior: "smooth" }); });
 $("main").addEventListener("click", e => {
   if (state.cat !== "home") return;
@@ -2306,7 +2310,7 @@ function dexToolbar(st){
   const tb = $("toolbar"); tb.hidden = false;
   if (tb.dataset.dex !== "1"){
     tb.dataset.dex = "1";
-    tb.innerHTML = `<div class="tb-head"><h2 class="dex-h2">Pokédex<small>binder</small></h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
+    tb.innerHTML = `<div class="tb-head"><h2 class="dex-h2"><button class="tb-title" type="button" data-to-top title="Back to top">Pokédex<small>binder</small></button></h2><div class="count" id="dexCount"></div><div class="bar"><span id="dexBar"></span></div></div>
       <div class="filters dex-tools">
         <form class="dex-find" id="dexFindForm"><input id="dexFind" list="dexNames" enterkeyhint="go" autocomplete="off" aria-label="Find a Pokémon by name or number"><datalist id="dexNames"></datalist><button class="btn" type="submit">Go</button></form>
         <select id="dexType" aria-label="Show one card type"><option value="">All types</option>${[...TYPE_ORDER].filter(c => c !== "Y").map(c => `<option value="${c}">${TCG_TYPES[c][1]} ${TCG_TYPES[c][0]}</option>`).join("")}</select>
