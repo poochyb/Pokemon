@@ -42,8 +42,9 @@ h1{font:800 1.2rem/1 var(--display);margin:0;letter-spacing:-.02em;white-space:n
 .logo-spark{transform-origin:32px 8px;transition:transform .3s}
 .home-link:hover .logo-spark{transform:rotate(45deg) scale(1.15)}
 body.cat-home .home-link{color:var(--gold)}
-.add{display:flex;gap:.4rem;flex:0 1 auto;min-width:0}
-.add input{flex:0 1 10rem;width:10rem;min-width:0;padding:.35rem .7rem;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
+.hdr-end{display:flex;align-items:center;gap:.4rem .65rem;flex:1 1 auto;min-width:0}
+.add{display:flex;gap:.4rem;flex:1 1 auto;max-width:22rem;min-width:0}
+.add input{flex:1 1 6rem;width:6rem;min-width:0;padding:.35rem .7rem;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.13);color:var(--cover-ink)}
 .add input::placeholder{color:rgba(242,245,250,.6)}
 .add select{padding:.35rem .4rem;border-radius:8px;border:0;background:rgba(255,255,255,.13);color:var(--cover-ink);max-width:6.5rem}
 .add select option{color:#1C2433}
@@ -470,7 +471,8 @@ dialog.dexdlg h3{margin:0}
 @media (max-width:640px){ .dex-short{display:inline} }
 @media (max-width:640px){
   h1{font-size:1.1rem}
-  .add{flex-basis:100%;order:3}
+  .hdr-end{display:contents}
+  .add{flex-basis:100%;max-width:none;order:3}
   .add input{flex:1 1 auto;width:auto}
   h1{flex-basis:100%}
   .total .lbl{display:none}
@@ -506,6 +508,7 @@ dialog.dexdlg h3{margin:0}
     </svg>
     <span class="logo-words"><span class="logo-t1">PYB’s</span><span class="logo-t2">TCG COLLECTION</span></span></button></h1>
     <nav class="cats" id="cats" aria-label="Category"></nav>
+    <div class="hdr-end">
     <form class="add" id="addForm">
       <input id="artistInput" list="artistList" placeholder="Add an artist…" autocomplete="off" aria-label="Artist name">
       <datalist id="artistList"></datalist>
@@ -518,6 +521,7 @@ dialog.dexdlg h3{margin:0}
       <button class="btn" type="submit">Add</button>
     </form>
     <button class="total" id="total" title="See your most valuable cards" hidden></button>
+    </div>
   </header>
   <div class="tabrow">
     <div class="tabwrap">
